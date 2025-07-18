@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DynamicFormsApp.Shared.Models;
 using DynamicFormsApp.Shared.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DynamicFormsApp.Server.Controllers
 {
