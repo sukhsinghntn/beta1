@@ -42,7 +42,7 @@ namespace DynamicFormsApp.Server.Services
             }
         }
 
-        public async Task<UserModel> GetUserData(string userName)
+        public async Task<UserModel?> GetUserData(string userName)
         {
             try
             {

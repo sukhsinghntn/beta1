@@ -59,7 +59,7 @@ else
             string currentUser = string.Empty;
             try
             {
-                currentUser = await Http.GetStringAsync("api/user/current");
+                currentUser = await Http.GetStringAsync("/api/user/current");
             }
             catch
             {

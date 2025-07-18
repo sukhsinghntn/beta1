@@ -100,7 +100,7 @@
 @code {
     private bool sidebarExpanded = true;
     private string sidebarToggleIcon => sidebarExpanded ? "keyboard_arrow_left" : "keyboard_arrow_right";
-    private UserModel ValidUser;
+    private UserModel? ValidUser;
     private string username;
     private EmailModel email = new EmailModel();
     private bool waitingforuserload = false;
@@ -215,7 +215,7 @@
         else
         {
             ValidUser = await UserService.GetUserData(userId);
-            username = ValidUser.DisplayName;
+            username = ValidUser?.DisplayName ?? userId;
         }
         waitingforuserload = true; // Mark the user data as loaded
     }
