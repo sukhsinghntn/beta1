@@ -129,7 +129,7 @@
     }
 
 
-    private async Task OpenReportDialog(string mode)
+    private async Task OpenBugDialog()
     {
         var dataUrl = await JSRuntime.InvokeAsync<string>("captureScreenshot");
         var base64 = dataUrl[(dataUrl.IndexOf(',') + 1)..];
@@ -143,12 +143,49 @@
 
         var parameters = new Dictionary<string, object>
         {
-            ["InitialAttachments"] = new List<EmailAttachment> { screenshot },
-            ["Mode"] = mode
+            ["InitialAttachments"] = new List<EmailAttachment> { screenshot }
         };
 
         await DialogService.OpenAsync<BugTextDialog>(
-            mode == "Feature" ? "Request Feature" : mode == "Feedback" ? "Send Feedback" : "Report Bug",
+            "Report Bug",
+            parameters,
+            new DialogOptions
+            {
+                Width = "50vw",
+                Height = "70vh",
+                Resizable = true,
+                Draggable = true
+            });
+    }
+
+    private async Task OpenFeatureDialog()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            ["Mode"] = "Feature"
+        };
+
+        await DialogService.OpenAsync<FeedbackDialog>(
+            "Request Feature",
+            parameters,
+            new DialogOptions
+            {
+                Width = "50vw",
+                Height = "70vh",
+                Resizable = true,
+                Draggable = true
+            });
+    }
+
+    private async Task OpenFeedbackDialog()
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            ["Mode"] = "Feedback"
+        };
+
+        await DialogService.OpenAsync<FeedbackDialog>(
+            "Send Feedback",
             parameters,
             new DialogOptions
             {
@@ -162,7 +199,18 @@
     private async Task OnFeedbackSelection(object value)
     {
         var mode = value?.ToString() ?? "Bug";
-        await OpenReportDialog(mode);
+        switch (mode)
+        {
+            case "Feature":
+                await OpenFeatureDialog();
+                break;
+            case "Feedback":
+                await OpenFeedbackDialog();
+                break;
+            default:
+                await OpenBugDialog();
+                break;
+        }
     }
     // Toggles the state of the sidebar between expanded and collapsed
     void SidebarToggleClick()
