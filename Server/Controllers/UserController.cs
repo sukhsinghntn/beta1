@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DynamicFormsApp.Shared.Models;
 using DynamicFormsApp.Shared.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DynamicFormsApp.Server.Controllers
 {
@@ -47,6 +48,13 @@ namespace DynamicFormsApp.Server.Controllers
         {
             var users = await _userService.SearchUsers(term ?? string.Empty);
             return Ok(users);
+        }
+
+        [HttpGet("current")]
+        [Authorize]
+        public ActionResult<string> GetCurrentUser()
+        {
+            return Ok(User.Identity?.Name ?? string.Empty);
         }
     }
 }

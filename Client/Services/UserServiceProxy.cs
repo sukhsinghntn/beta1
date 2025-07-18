@@ -19,9 +19,16 @@ namespace DynamicFormsApp.Client.Services
             return await response.Content.ReadFromJsonAsync<bool>();
         }
 
-        public async Task<UserModel> GetUserData(string userName)
+        public async Task<UserModel?> GetUserData(string userName)
         {
-            return await _httpClient.GetFromJsonAsync<UserModel>($"api/user/{userName}");
+            try
+            {
+                return await _httpClient.GetFromJsonAsync<UserModel>($"api/user/{userName}");
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
         }
 
         public async Task<List<UserModel>> GetAllUsers()
