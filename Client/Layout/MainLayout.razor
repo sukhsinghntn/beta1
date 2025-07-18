@@ -210,12 +210,21 @@
         string userId = await CookieHelper.LoginStatus();
         if (string.IsNullOrEmpty(userId))
         {
-            username = null;
+            userId = await UserService.GetCurrentUserName();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await CookieHelper.LoginUser(userId);
+            }
         }
-        else
+
+        if (!string.IsNullOrEmpty(userId))
         {
             ValidUser = await UserService.GetUserData(userId);
             username = ValidUser.DisplayName;
+        }
+        else
+        {
+            username = null;
         }
         waitingforuserload = true; // Mark the user data as loaded
     }

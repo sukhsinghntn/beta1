@@ -2,16 +2,19 @@ using DynamicFormsApp.Shared.Services;
 using DynamicFormsApp.Shared.Models;
 using System.DirectoryServices;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 
 namespace DynamicFormsApp.Server.Services
 {
     public class UserService : IUserService
     {
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserService(IConfiguration configuration)
+        public UserService(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<bool> ValidateUser(UserModel user)
@@ -203,6 +206,12 @@ namespace DynamicFormsApp.Server.Services
             }
 
             return list.OrderBy(u => u.DisplayName).ToList();
+        }
+
+        public Task<string?> GetCurrentUserName()
+        {
+            var name = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+            return Task.FromResult(name);
         }
 
     }
