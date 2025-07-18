@@ -11,7 +11,7 @@
     <!-- Header -->
     <RadzenRow>
         <RadzenText TextStyle="TextStyle.Body1" TagName="TagName.H3">
-            Enter Bug Description and Attach Files
+            @Title
         </RadzenText>
     </RadzenRow>
 
@@ -77,6 +77,14 @@
 
 @code {
     [Parameter] public List<EmailAttachment>? InitialAttachments { get; set; }
+    [Parameter] public string Mode { get; set; } = "Bug";
+
+    private string Title => Mode switch
+    {
+        "Feature" => "Request a Feature",
+        "Feedback" => "Send Feedback",
+        _ => "Report a Bug"
+    };
 
     string BugDescriptionText { get; set; } = string.Empty;
     private string username;
@@ -183,20 +191,37 @@
     {
         if (string.IsNullOrWhiteSpace(BugDescriptionText))
         {
-            await DialogService.Alert("Please enter a bug description.", "Missing Data");
+            await DialogService.Alert("Please enter a description.", "Missing Data");
             return;
         }
 
-        var model = new EmailModel
-            {
-                Body = BugDescriptionText,
-                Link = NavigationManager.Uri,
-                UserName = "test",
-                Attachments = Attachments
-            };
+        var names = (ValidUser?.DisplayName ?? string.Empty).Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
 
-        await EmailService.SendBugReportEmail(model);
-        DialogService.Close(model);
+        var model = new EmailModel
+        {
+            Body = BugDescriptionText,
+            Link = NavigationManager.Uri,
+            UserName = ValidUser?.UserName,
+            FirstName = names.Length > 0 ? names[0] : string.Empty,
+            LastName = names.Length > 1 ? names[1] : string.Empty,
+            ReporterEmail = ValidUser?.Email,
+            Attachments = Attachments
+        };
+
+        switch (Mode)
+        {
+            case "Feature":
+                await EmailService.SendFeatureRequestEmail(model);
+                break;
+            case "Feedback":
+                await EmailService.SendFeedbackEmail(model);
+                break;
+            default:
+                await EmailService.SendBugReportEmail(model);
+                break;
+        }
+
+        DialogService.Close(true);
     }
 
     void OnCancel() => DialogService.Close();

@@ -79,7 +79,16 @@
             <RadzenStack AlignItems="Radzen.AlignItems.Center" Gap="0" class="rz-py-4 rz-py-lg-6">
                 @if (username is not null)
                 {
-                    <RadzenButton Icon="bug_report" Click="@ReportBug" Text="Report Bug" ButtonStyle="ButtonStyle.Warning" Style="border-radius: 4px; margin: 10px;" class=@dynamicClass></RadzenButton>
+                    <RadzenSplitButton Icon="bug_report"
+                                      Text="Report Bug"
+                                      ButtonStyle="ButtonStyle.Warning"
+                                      Style="border-radius: 4px; margin: 10px;"
+                                      Class=@dynamicClass
+                                      Click="@(v => OnFeedbackSelection(v))">
+                        <RadzenSplitButtonItem Text="Report Bug" Value="Bug" Icon="bug_report" />
+                        <RadzenSplitButtonItem Text="Request Feature" Value="Feature" Icon="new_releases" />
+                        <RadzenSplitButtonItem Text="Send Feedback" Value="Feedback" Icon="feedback" />
+                    </RadzenSplitButton>
                 }
                 <RadzenText Text="DynamicFormsApp V 0.8" TextStyle="Radzen.Blazor.TextStyle.Caption" TagName="Radzen.Blazor.TagName.P" TextAlign="Radzen.TextAlign.Center" class=@dynamicClass />
             </RadzenStack>
@@ -120,50 +129,40 @@
     }
 
 
-    private async Task ReportBug()
+    private async Task OpenReportDialog(string mode)
     {
-        // 1) Capture screenshot as dataURL
         var dataUrl = await JSRuntime.InvokeAsync<string>("captureScreenshot");
-
-        // 2) Convert base64 → byte[]
         var base64 = dataUrl[(dataUrl.IndexOf(',') + 1)..];
         var bytes = Convert.FromBase64String(base64);
 
-        // 3) Build an EmailAttachment
         var screenshot = new EmailAttachment
-            {
-                Name = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png",
-                Content = bytes
-            };
-
-        // 4) Pass it into the dialog
-        var parameters = new Dictionary<string, object>
-            {
-                ["InitialAttachments"] = new List<EmailAttachment> { screenshot }
-            };
-
-        // 5) Open the dialog
-        var bugText = await DialogService.OpenAsync<BugTextDialog>(
-          "Explain Bug",
-          parameters,
-          new DialogOptions
-              {
-                  Width = "50vw",
-                  Height = "70vh",
-                  Resizable = true,
-                  Draggable = true
-              }
-        );
-
-        if (!string.IsNullOrEmpty(bugText))
         {
-            email.Link = NavigationManager.Uri;
-            email.Body = bugText;
-            email.UserName = ValidUser.UserName;
+            Name = $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png",
+            Content = bytes
+        };
 
-            await EmailService.SendBugReportEmail(email);
-            await DialogService.Alert("Successfully sent Bug notification.", "Bug Report Success");
-        }
+        var parameters = new Dictionary<string, object>
+        {
+            ["InitialAttachments"] = new List<EmailAttachment> { screenshot },
+            ["Mode"] = mode
+        };
+
+        await DialogService.OpenAsync<BugTextDialog>(
+            mode == "Feature" ? "Request Feature" : mode == "Feedback" ? "Send Feedback" : "Report Bug",
+            parameters,
+            new DialogOptions
+            {
+                Width = "50vw",
+                Height = "70vh",
+                Resizable = true,
+                Draggable = true
+            });
+    }
+
+    private async Task OnFeedbackSelection(object value)
+    {
+        var mode = value?.ToString() ?? "Bug";
+        await OpenReportDialog(mode);
     }
     // Toggles the state of the sidebar between expanded and collapsed
     void SidebarToggleClick()
