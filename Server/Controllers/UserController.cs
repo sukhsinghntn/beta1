@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DynamicFormsApp.Shared.Models;
 using DynamicFormsApp.Shared.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DynamicFormsApp.Server.Controllers
 {
@@ -50,6 +51,7 @@ namespace DynamicFormsApp.Server.Controllers
         }
 
         [HttpGet("current")]
+        [Authorize]
         public async Task<ActionResult<UserModel>> GetCurrent()
         {
             var user = await _userService.GetCurrentUser();
