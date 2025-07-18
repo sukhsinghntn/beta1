@@ -8,10 +8,12 @@ namespace DynamicFormsApp.Server.Services
     public class UserService : IUserService
     {
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _contextAccessor;
 
-        public UserService(IConfiguration configuration)
+        public UserService(IConfiguration configuration, IHttpContextAccessor contextAccessor)
         {
             _configuration = configuration;
+            _contextAccessor = contextAccessor;
         }
 
         public async Task<bool> ValidateUser(UserModel user)
@@ -203,6 +205,18 @@ namespace DynamicFormsApp.Server.Services
             }
 
             return list.OrderBy(u => u.DisplayName).ToList();
+        }
+
+        public async Task<UserModel?> GetCurrentUser()
+        {
+            var windowsUser = _contextAccessor.HttpContext?.User?.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(windowsUser))
+            {
+                return null;
+            }
+
+            var userName = windowsUser.Contains("\\") ? windowsUser.Split('\\')[1] : windowsUser;
+            return await GetUserData(userName);
         }
 
     }

@@ -51,14 +51,16 @@ else
     private bool isLoading = true;
     bool passwordVisible = true;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        var current = await UserService.GetCurrentUser();
+        if (current != null)
         {
-            // Hide loading spinner after the initial render
-            isLoading = false;
-            StateHasChanged();
+            await CookieHelper.LoginUser(current.UserName);
+            NavigationManager.NavigateTo("/", true);
+            return;
         }
+        isLoading = false;
     }
 
     private async Task OnSubmit()
