@@ -1,6 +1,7 @@
 @page "/login"
 @using Radzen
 @using Microsoft.AspNetCore.Components.Web
+@inject HttpClient Http
 
 <PageTitle>Login</PageTitle>
 
@@ -55,7 +56,24 @@ else
     {
         if (firstRender)
         {
-            // Hide loading spinner after the initial render
+            string currentUser = string.Empty;
+            try
+            {
+                currentUser = await Http.GetStringAsync("api/user/current");
+            }
+            catch
+            {
+                // ignore errors and show login form
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentUser))
+            {
+                await CookieHelper.LoginUser(currentUser);
+                NavigationManager.NavigateTo("/", true);
+                return;
+            }
+
+            // Hide loading spinner after the check
             isLoading = false;
             StateHasChanged();
         }

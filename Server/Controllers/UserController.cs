@@ -48,5 +48,11 @@ namespace DynamicFormsApp.Server.Controllers
             var users = await _userService.SearchUsers(term ?? string.Empty);
             return Ok(users);
         }
+
+        [HttpGet("current")]
+        public ActionResult<string> GetCurrentUser()
+        {
+            return Ok(User.Identity?.Name ?? string.Empty);
+        }
     }
 }
