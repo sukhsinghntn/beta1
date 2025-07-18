@@ -51,6 +51,19 @@ else
     private bool isLoading = true;
     bool passwordVisible = true;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var current = await UserService.GetCurrentUser();
+        if (current != null)
+        {
+            await CookieHelper.LoginUser(current.UserName);
+            var uri = new Uri(NavigationManager.Uri);
+            var returnUrl = uri.Query.Contains("returnUrl") ? uri.Query.Substring(uri.Query.IndexOf("returnUrl") + 10) : "/";
+            returnUrl = Uri.UnescapeDataString(returnUrl);
+            NavigationManager.NavigateTo(returnUrl, true);
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
