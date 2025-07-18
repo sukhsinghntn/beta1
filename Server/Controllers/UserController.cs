@@ -50,6 +50,7 @@ namespace DynamicFormsApp.Server.Controllers
         }
 
         [HttpGet("current")]
+        [Authorize]
         public ActionResult<string> GetCurrentUser()
         {
             return Ok(User.Identity?.Name ?? string.Empty);
