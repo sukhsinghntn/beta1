@@ -6,6 +6,7 @@ using DynamicFormsApp.Server.Services;
 using DynamicFormsApp.Server.Data;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Server.IISIntegration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<CookieHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+builder.Services.AddAuthentication(IISDefaults.AuthenticationScheme);
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 builder.Services.AddRadzenComponents();
 builder.Services.AddHttpClient();
@@ -64,6 +68,8 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseResponseCompression();
 app.MapControllers();
 app.UseStaticFiles();
