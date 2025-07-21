@@ -51,13 +51,13 @@ namespace DynamicFormsApp.Server.Controllers
         }
 
         [HttpGet("current")]
-        [Authorize]
-        public async Task<ActionResult<UserModel>> GetCurrent()
+        [AllowAnonymous]
+        public async Task<ActionResult<UserModel?>> GetCurrent()
         {
             var user = await _userService.GetCurrentUser();
             if (user == null)
             {
-                return Unauthorized();
+                return NoContent();
             }
             return Ok(user);
         }

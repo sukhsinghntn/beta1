@@ -39,7 +39,12 @@ namespace DynamicFormsApp.Client.Services
         {
             try
             {
-                return await _httpClient.GetFromJsonAsync<UserModel>("api/user/current");
+                var response = await _httpClient.GetAsync("api/user/current");
+                if (!response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return null;
+                }
+                return await response.Content.ReadFromJsonAsync<UserModel>();
             }
             catch
             {
