@@ -24,6 +24,16 @@ namespace DynamicFormsApp.Client.Services
             return await _httpClient.GetFromJsonAsync<UserModel>($"api/user/{userName}");
         }
 
+        public async Task<string?> GetCurrentUserName()
+        {
+            var response = await _httpClient.GetAsync("api/user/current");
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+            return await response.Content.ReadAsStringAsync();
+        }
+
         public async Task<List<UserModel>> GetAllUsers()
         {
             return await _httpClient.GetFromJsonAsync<List<UserModel>>("api/user/list");

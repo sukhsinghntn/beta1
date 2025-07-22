@@ -210,6 +210,16 @@
         string userId = await CookieHelper.LoginStatus();
         if (string.IsNullOrEmpty(userId))
         {
+            var current = await UserService.GetCurrentUserName();
+            if (!string.IsNullOrEmpty(current))
+            {
+                await CookieHelper.LoginUser(current);
+                userId = current;
+            }
+        }
+
+        if (string.IsNullOrEmpty(userId))
+        {
             username = null;
         }
         else

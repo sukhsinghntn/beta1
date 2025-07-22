@@ -22,6 +22,17 @@ namespace DynamicFormsApp.Server.Controllers
             return await _userService.ValidateUser(user);
         }
 
+        [HttpGet("current")]
+        public async Task<ActionResult<string>> GetCurrentUserName()
+        {
+            var name = await _userService.GetCurrentUserName();
+            if (string.IsNullOrEmpty(name))
+            {
+                return Unauthorized();
+            }
+            return Ok(name);
+        }
+
 
         [HttpGet("{userName}")]
         public async Task<ActionResult<UserModel>> GetUserData(string userName)
