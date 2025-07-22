@@ -48,5 +48,13 @@ namespace DynamicFormsApp.Server.Controllers
             var users = await _userService.SearchUsers(term ?? string.Empty);
             return Ok(users);
         }
+
+        [HttpGet("current")]
+        public async Task<ActionResult<string>> GetCurrentUserName()
+        {
+            var name = await _userService.GetCurrentUserName();
+            if (string.IsNullOrEmpty(name)) return NotFound();
+            return Ok(name);
+        }
     }
 }
