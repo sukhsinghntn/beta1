@@ -34,5 +34,22 @@ namespace DynamicFormsApp.Client.Services
             var encoded = System.Net.WebUtility.UrlEncode(term);
             return await _httpClient.GetFromJsonAsync<List<UserModel>>($"api/user/search?term={encoded}");
         }
+
+        public async Task<UserModel?> GetCurrentUser()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/user/current");
+                if (!response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return null;
+                }
+                return await response.Content.ReadFromJsonAsync<UserModel>();
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

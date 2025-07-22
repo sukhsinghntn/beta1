@@ -55,7 +55,13 @@ else
     {
         if (firstRender)
         {
-            // Hide loading spinner after the initial render
+            var current = await UserService.GetCurrentUser();
+            if (current != null)
+            {
+                await CookieHelper.LoginUser(current.UserName);
+                NavigationManager.NavigateTo("/", true);
+                return;
+            }
             isLoading = false;
             StateHasChanged();
         }
