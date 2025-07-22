@@ -72,12 +72,12 @@ else
 
 app.UseHttpsRedirection();
 app.UseResponseCompression();
-app.MapControllers();
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 
 // Configure Blazor components (server and WebAssembly rendering)
 app.MapRazorComponents<App>()

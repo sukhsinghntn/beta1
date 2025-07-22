@@ -44,7 +44,7 @@ namespace DynamicFormsApp.Server.Services
             }
         }
 
-        public async Task<UserModel> GetUserData(string userName)
+        public async Task<UserModel?> GetUserData(string userName)
         {
             try
             {
@@ -110,6 +110,10 @@ namespace DynamicFormsApp.Server.Services
         public Task<string?> GetCurrentUserName()
         {
             var name = _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+            if (!string.IsNullOrEmpty(name) && name.Contains("\\"))
+            {
+                name = name.Split('\x5c').Last();
+            }
             return Task.FromResult<string?>(name);
         }
 
