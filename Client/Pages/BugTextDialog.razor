@@ -80,7 +80,7 @@
 
     string BugDescriptionText { get; set; } = string.Empty;
     private string username;
-    private UserModel ValidUser;
+    private UserModel? ValidUser;
     List<EmailAttachment> Attachments { get; set; } = new();
     private bool waitingforuserload = false;
 
@@ -122,7 +122,7 @@
         else
         {
             ValidUser = await UserService.GetUserData(userId);
-            username = ValidUser.DisplayName;
+            username = ValidUser?.DisplayName;
         }
         waitingforuserload = true; // Mark the user data as loaded
     }

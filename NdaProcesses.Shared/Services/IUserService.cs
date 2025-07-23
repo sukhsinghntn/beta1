@@ -10,7 +10,8 @@ namespace DynamicFormsApp.Shared.Services
     public interface IUserService
     {
         Task<bool> ValidateUser(UserModel user);
-        Task<UserModel> GetUserData(string userName);
+        Task<UserModel?> GetUserData(string userName);
+        Task<string?> GetCurrentUserName();
         Task<List<UserModel>> GetAllUsers();
         Task<List<UserModel>> SearchUsers(string term);
     }
