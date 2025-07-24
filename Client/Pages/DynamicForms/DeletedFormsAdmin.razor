@@ -10,10 +10,10 @@
 
 <ul class="nav nav-tabs mb-3">
     <li class="nav-item">
-        <a class='nav-link @(activeTab == "deleted" ? "active" : null)' href="#" @onclick='() => SetTab("deleted")'>Deleted Forms</a>
+        <a class='nav-link @(activeTab == "deleted" ? "active" : null)' href="#" @onclick='() => SetTab("deleted")' @onclick:preventDefault>Deleted Forms</a>
     </li>
     <li class="nav-item">
-        <a class='nav-link @(activeTab == "inactive" ? "active" : null)' href="#" @onclick='() => SetTab("inactive")'>Unpublished Forms</a>
+        <a class='nav-link @(activeTab == "inactive" ? "active" : null)' href="#" @onclick='() => SetTab("inactive")' @onclick:preventDefault>Unpublished Forms</a>
     </li>
 </ul>
 
