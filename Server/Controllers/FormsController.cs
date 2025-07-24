@@ -239,14 +239,11 @@ namespace DynamicFormsApp.Server.Controllers
 
             await _svc.DeleteFormAsync(id, user, isAdmin);
 
-            if (isAdmin && !string.Equals(form.CreatedBy, user, StringComparison.OrdinalIgnoreCase))
+            var owner = await _userSvc.GetUserData(form.CreatedBy);
+            if (!string.IsNullOrEmpty(owner?.Email))
             {
-                var owner = await _userSvc.GetUserData(form.CreatedBy);
-                if (!string.IsNullOrEmpty(owner?.Email))
-                {
-                    var deletedBy = requester?.DisplayName ?? user;
-                    await _emailSvc.SendFormDeletedNotification(owner.Email, form.Name, form.Description, deletedBy, reason ?? string.Empty);
-                }
+                var deletedBy = requester?.DisplayName ?? user;
+                await _emailSvc.SendFormDeletedNotification(owner.Email, form.Name, form.Description, deletedBy, reason ?? string.Empty);
             }
 
             return NoContent();

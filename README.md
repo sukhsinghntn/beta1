@@ -11,7 +11,7 @@ The Dynamic Forms System lets employees create custom forms, share them with oth
 - **Sharing**: Share a form with coworkers so they can view responses. Transfer ownership when someone else should maintain the form.
 - **Search**: Search all published forms. IT staff can change form ownership if needed.
 - **Deleted and Unpublished Forms**: IT administrators can restore deleted forms or publish inactive forms from the Admin page.
-- **Admin Deletion**: IT administrators can delete any form from the Search page. They must provide a reason, and the owner receives an email notification with that reason.
+- **Form Deletion Notices**: Whenever a form is deleted, the owner receives an email. If an IT administrator deletes someone else's form, they must provide a reason and that reason is included in the email.
 
 ## Typical Workflow
 
