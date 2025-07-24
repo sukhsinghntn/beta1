@@ -37,6 +37,13 @@ namespace DynamicFormsApp.Server.Controllers
             return Ok();
         }
 
+        [HttpPost("formdeleted")]
+        public async Task<IActionResult> SendFormDeletedEmail([FromBody] FormDeletedNotification model)
+        {
+            await _emailService.SendFormDeletedNotification(model.toEmail, model.formName, model.description, model.deletedBy);
+            return Ok();
+        }
+
         public class FormResponseNotification
         {
             public string toEmail { get; set; }
@@ -53,6 +60,14 @@ namespace DynamicFormsApp.Server.Controllers
             public int formId { get; set; }
             public string sharedBy { get; set; }
             public string ownerEmail { get; set; }
+        }
+
+        public class FormDeletedNotification
+        {
+            public string toEmail { get; set; }
+            public string formName { get; set; }
+            public string? description { get; set; }
+            public string deletedBy { get; set; }
         }
     }
 }

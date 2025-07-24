@@ -132,23 +132,37 @@ else
 
     private async Task Restore(int id)
     {
-        await Http.PostAsync($"api/forms/{id}/restore", null);
         var item = forms?.FirstOrDefault(f => f.Id == id);
-        if (item != null)
-        {
-            forms!.Remove(item);
-        }
+        if (item == null)
+            return;
+
+        bool? confirm = await DialogService.Confirm(
+            $"Are you sure you want to restore '{item.Name}' {item.Description}?",
+            "Restore Form",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
+        if (confirm != true)
+            return;
+
+        await Http.PostAsync($"api/forms/{id}/restore", null);
+        forms!.Remove(item);
         StateHasChanged();
     }
 
     private async Task Publish(int id)
     {
-        await Http.PostAsync($"api/forms/{id}/publish", null);
         var item = inactiveForms?.FirstOrDefault(f => f.Id == id);
-        if (item != null)
-        {
-            inactiveForms!.Remove(item);
-        }
+        if (item == null)
+            return;
+
+        bool? confirm = await DialogService.Confirm(
+            $"Are you sure you want to publish '{item.Name}' {item.Description}?",
+            "Publish Form",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
+        if (confirm != true)
+            return;
+
+        await Http.PostAsync($"api/forms/{id}/publish", null);
+        inactiveForms!.Remove(item);
         StateHasChanged();
     }
 

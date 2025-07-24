@@ -260,7 +260,10 @@
         {
             var wrapper = await resp.Content.ReadFromJsonAsync<JsonElement>();
             int newId = wrapper.GetProperty("formId").GetInt32();
-            Navigation.NavigateTo($"/forms/{newId}");
+            var link = $"{Navigation.BaseUri.TrimEnd('/')}/forms/{newId}";
+            await JS.InvokeVoidAsync("copyText", link);
+            await DialogService.Alert("The link to the form has been copied to your clipboard.", "Form Created");
+            Navigation.NavigateTo("/forms");
         }
         else
         {

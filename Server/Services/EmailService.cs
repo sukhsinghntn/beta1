@@ -138,5 +138,29 @@ namespace DynamicFormsApp.Server.Services
             };
             await client.SendMailAsync(mail);
         }
+
+        public async Task SendFormDeletedNotification(string toEmail, string formName, string? description, string deletedBy)
+        {
+            var descBlock = string.IsNullOrWhiteSpace(description) ? string.Empty : $"<p>{description}</p>";
+
+            var mail = new MailMessage
+            {
+                From = new MailAddress(_configuration["Email:From"] ?? "noreply@example.com"),
+                Subject = $"Your form '{formName}' was deleted",
+                Body = $@"<div style='font-family:sans-serif;font-size:14px;line-height:1.5'>
+                            <p>Your form <strong>{formName}</strong> was deleted by <strong>{deletedBy}</strong>.</p>
+                            {descBlock}
+                        </div>",
+                IsBodyHtml = true
+            };
+
+            mail.To.Add(toEmail);
+
+            using var client = new SmtpClient(_configuration["Email:IP"])
+            {
+                Port = int.Parse(_configuration["Email:Port"]!)
+            };
+            await client.SendMailAsync(mail);
+        }
     }
 }
