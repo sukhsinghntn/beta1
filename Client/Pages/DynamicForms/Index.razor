@@ -358,7 +358,12 @@ else
             int newId = wrapper.GetProperty("formId").GetInt32();
             var link = $"{Navigation.BaseUri.TrimEnd('/')}/forms/{newId}";
             await JS.InvokeVoidAsync("copyText", link);
-            await DialogService.Alert("The link to the form has been copied to your clipboard.", "Form Created");
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Form Created",
+                Detail = "Link copied to clipboard."
+            });
             ignoreNavigationPrompt = true;
             Navigation.NavigateTo("/forms");
         }
