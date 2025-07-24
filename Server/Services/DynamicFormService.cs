@@ -329,6 +329,26 @@ namespace DynamicFormsApp.Server.Services
                 .ToListAsync();
         }
 
+        public async Task<List<Form>> GetInactiveFormsAsync()
+        {
+            return await _db.Forms
+                .Include(f => f.Fields)
+                .Where(f => !f.IsActive && !f.IsDeleted && !f.IsDraft)
+                .ToListAsync();
+        }
+
+        public async Task PublishFormAsync(int formId)
+        {
+            var form = await _db.Forms.FirstOrDefaultAsync(f => f.Id == formId);
+            if (form == null)
+            {
+                throw new InvalidOperationException("Form not found");
+            }
+
+            form.IsActive = true;
+            await _db.SaveChangesAsync();
+        }
+
         public async Task<int> GetFormCountAsync()
         {
             return await _db.Forms.CountAsync(f => f.IsActive && !f.IsDraft && !f.IsDeleted);
