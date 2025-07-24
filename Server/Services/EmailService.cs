@@ -139,9 +139,10 @@ namespace DynamicFormsApp.Server.Services
             await client.SendMailAsync(mail);
         }
 
-        public async Task SendFormDeletedNotification(string toEmail, string formName, string? description, string deletedBy)
+        public async Task SendFormDeletedNotification(string toEmail, string formName, string? description, string deletedBy, string reason)
         {
             var descBlock = string.IsNullOrWhiteSpace(description) ? string.Empty : $"<p>{description}</p>";
+            var reasonBlock = string.IsNullOrWhiteSpace(reason) ? string.Empty : $"<p><strong>Reason:</strong> {reason}</p>";
 
             var mail = new MailMessage
             {
@@ -150,6 +151,7 @@ namespace DynamicFormsApp.Server.Services
                 Body = $@"<div style='font-family:sans-serif;font-size:14px;line-height:1.5'>
                             <p>Your form <strong>{formName}</strong> was deleted by <strong>{deletedBy}</strong>.</p>
                             {descBlock}
+                            {reasonBlock}
                         </div>",
                 IsBodyHtml = true
             };

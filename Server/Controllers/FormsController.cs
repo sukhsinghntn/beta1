@@ -221,7 +221,7 @@ namespace DynamicFormsApp.Server.Controllers
 
         // DELETE /api/forms/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, [FromQuery] string? reason)
         {
             if (!Request.Cookies.TryGetValue("userName", out var user) || string.IsNullOrEmpty(user))
             {
@@ -245,7 +245,7 @@ namespace DynamicFormsApp.Server.Controllers
                 if (!string.IsNullOrEmpty(owner?.Email))
                 {
                     var deletedBy = requester?.DisplayName ?? user;
-                    await _emailSvc.SendFormDeletedNotification(owner.Email, form.Name, form.Description, deletedBy);
+                    await _emailSvc.SendFormDeletedNotification(owner.Email, form.Name, form.Description, deletedBy, reason ?? string.Empty);
                 }
             }
 

@@ -38,9 +38,9 @@ namespace DynamicFormsApp.Client.Services
             await _httpClient.PostAsJsonAsync("api/email/formtransfer", payload);
         }
 
-        public async Task SendFormDeletedNotification(string toEmail, string formName, string? description, string deletedBy)
+        public async Task SendFormDeletedNotification(string toEmail, string formName, string? description, string deletedBy, string reason)
         {
-            var payload = new { toEmail, formName, description, deletedBy };
+            var payload = new { toEmail, formName, description, deletedBy, reason };
             await _httpClient.PostAsJsonAsync("api/email/formdeleted", payload);
         }
     }

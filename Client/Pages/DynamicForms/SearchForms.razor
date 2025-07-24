@@ -109,16 +109,20 @@ else
             return;
         }
 
-        bool? confirm = await DialogService.Confirm(
-            $"Are you sure you want to delete the form '{item.Name}'?",
-            "Delete Form",
-            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
-        if (confirm != true)
+        var parameters = new Dictionary<string, object>
+        {
+            ["FormName"] = item.Name
+        };
+        var result = await DialogService.OpenAsync<DeleteFormDialog>(
+            "Delete Form", parameters, new DialogOptions { Width = "400px" });
+        if (result is not string reason || string.IsNullOrWhiteSpace(reason))
         {
             return;
         }
 
-        await Http.DeleteAsync($"api/forms/{id}");
+        var encoded = Uri.EscapeDataString(reason);
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"api/forms/{id}?reason={encoded}");
+        await Http.SendAsync(request);
         forms!.Remove(item);
         NotificationService.Notify(new NotificationMessage
         {

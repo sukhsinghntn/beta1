@@ -40,7 +40,7 @@ namespace DynamicFormsApp.Server.Controllers
         [HttpPost("formdeleted")]
         public async Task<IActionResult> SendFormDeletedEmail([FromBody] FormDeletedNotification model)
         {
-            await _emailService.SendFormDeletedNotification(model.toEmail, model.formName, model.description, model.deletedBy);
+            await _emailService.SendFormDeletedNotification(model.toEmail, model.formName, model.description, model.deletedBy, model.reason);
             return Ok();
         }
 
@@ -68,6 +68,7 @@ namespace DynamicFormsApp.Server.Controllers
             public string formName { get; set; }
             public string? description { get; set; }
             public string deletedBy { get; set; }
+            public string reason { get; set; }
         }
     }
 }
