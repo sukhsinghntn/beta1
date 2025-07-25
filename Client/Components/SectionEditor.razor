@@ -1,5 +1,7 @@
 @using DynamicFormsApp.Shared
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="card mb-4 shadow-sm section-card" data-id="@Index">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -40,6 +42,7 @@
     [Parameter] public EventCallback<DesignerSection> OnDelete { get; set; }
 
     private DotNetObjectReference<SectionEditor>? objRef;
+    private IJSObjectReference? sortableModule;
     private string ContainerId => $"section-{Index}-fields";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -47,7 +50,8 @@
         if (firstRender)
         {
             objRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef);
+            sortableModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/sortable-wrapper.js");
+            await sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef);
         }
     }
 
@@ -66,13 +70,19 @@
     void AddField()
     {
         Section.Fields.Add(new DesignerField());
-        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        if (sortableModule is not null)
+        {
+            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        }
     }
 
     void RemoveField(DesignerField fld)
     {
         Section.Fields.Remove(fld);
-        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        if (sortableModule is not null)
+        {
+            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        }
     }
 
     void DuplicateField(DesignerField fld)
@@ -90,13 +100,20 @@
             ScaleMax = fld.ScaleMax
         };
         Section.Fields.Insert(Section.Fields.IndexOf(fld) + 1, copy);
-        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        if (sortableModule is not null)
+        {
+            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+        }
     }
 
     void Toggle() => Section.Collapsed = !Section.Collapsed;
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         objRef?.Dispose();
+        if (sortableModule is not null)
+        {
+            await sortableModule.DisposeAsync();
+        }
     }
 }

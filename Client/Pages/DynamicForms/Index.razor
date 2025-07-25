@@ -3,10 +3,11 @@
 @using System.Text.Json
 @using DynamicFormsApp.Shared
 @using DynamicFormsApp.Shared.Models
+@using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject HttpClient Http
 @inject NavigationManager Navigation
-@implements IDisposable
+@implements IAsyncDisposable
 
 <h2 class="mb-2">Form Builder</h2>
 
@@ -56,13 +57,15 @@
     private bool notifyOnResponse = false;
     private string notificationEmail = string.Empty;
     private DotNetObjectReference<Index>? objRef;
+    private IJSObjectReference? sortableModule;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             objRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef);
+            sortableModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/sortable-wrapper.js");
+            await sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef);
         }
     }
 
@@ -84,14 +87,20 @@
         if (confirmed == true)
         {
             sections.Remove(section);
-            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+            if (sortableModule is not null)
+            {
+                await sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+            }
         }
     }
 
     void AddSection()
     {
         sections.Add(new DesignerSection());
-        JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+        if (sortableModule is not null)
+        {
+            sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+        }
     }
 
     async Task HandleSubmit()
@@ -176,8 +185,12 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         objRef?.Dispose();
+        if (sortableModule is not null)
+        {
+            await sortableModule.DisposeAsync();
+        }
     }
 }
