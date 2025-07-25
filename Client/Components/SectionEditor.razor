@@ -51,7 +51,7 @@
         {
             objRef = DotNetObjectReference.Create(this);
             sortableModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/sortable-wrapper.js");
-            await sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef);
+            await JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef);
         }
     }
 
@@ -72,7 +72,7 @@
         Section.Fields.Add(new DesignerField());
         if (sortableModule is not null)
         {
-            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+            JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
         }
     }
 
@@ -81,7 +81,7 @@
         Section.Fields.Remove(fld);
         if (sortableModule is not null)
         {
-            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+            JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
         }
     }
 
@@ -102,7 +102,7 @@
         Section.Fields.Insert(Section.Fields.IndexOf(fld) + 1, copy);
         if (sortableModule is not null)
         {
-            sortableModule.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+            JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
         }
     }
 
