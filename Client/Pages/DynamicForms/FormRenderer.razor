@@ -137,7 +137,10 @@ else
 
                     case "section":
                         <hr />
-                        <h5>@fld.Label</h5>
+                        @if (!string.IsNullOrWhiteSpace(fld.Label))
+                        {
+                            <h5>@fld.Label</h5>
+                        }
                         @if (!string.IsNullOrWhiteSpace(GetInstructions(fld)))
                         {
                             <p class="text-muted">@GetInstructions(fld)</p>

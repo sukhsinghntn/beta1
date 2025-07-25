@@ -10,7 +10,10 @@
 {
     <div class="mb-4">
         <hr />
-        <h5>@(section.Title)</h5>
+        @if (!string.IsNullOrWhiteSpace(section.Title))
+        {
+            <h5>@(section.Title)</h5>
+        }
         @if (!string.IsNullOrWhiteSpace(section.Instructions))
         {
             <p class="text-muted">@(section.Instructions)</p>
