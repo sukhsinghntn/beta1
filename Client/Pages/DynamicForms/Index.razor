@@ -74,7 +74,7 @@
                 @for (int s = 0; s < sections.Count; s++)
                 {
                     var secIndex = s;
-                    <div class="section-wrapper mb-4" data-section="@secIndex" id="section-@secIndex">
+                    <div class="section-wrapper mb-4" data-section="@secIndex" id="section-@secIndex" @key="sections[secIndex]">
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center gap-2">
@@ -378,6 +378,18 @@ else
         int rowCounter = 0;
         foreach (var sec in sections)
         {
+            list.Add(new
+            {
+                Label = sec.Title,
+                FieldType = "section",
+                IsRequired = false,
+                Row = rowCounter,
+                Column = 0,
+                OptionsJson = string.IsNullOrWhiteSpace(sec.Instructions) ? null :
+                    JsonSerializer.Serialize(new { Instructions = sec.Instructions })
+            });
+            rowCounter++;
+
             foreach (var row in sec.Rows)
             {
                 for (int c = 0; c < row.Fields.Count; c++)
@@ -393,7 +405,9 @@ else
                         OptionsJson = JsonSerializer.Serialize(
                             f.OptionItems.Count > 0 ? f.OptionItems :
                             f.GridRows.Count > 0 || f.GridColumns.Count > 0 ? new { Rows = f.GridRows, Columns = f.GridColumns } :
-                            f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } : new object()
+                            f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } :
+                            !string.IsNullOrWhiteSpace(f.Instructions) ? new { Instructions = f.Instructions } :
+                            new object()
                         )
                     });
                 }

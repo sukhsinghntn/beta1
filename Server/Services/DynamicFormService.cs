@@ -124,11 +124,14 @@ namespace DynamicFormsApp.Server.Services
 
                     var rawName = SanitizeKey(existing.Name);
                     var tableName = $"Form_{existing.Id}_{rawName}";
-                    var sqlType = MapToSqlType(newField.FieldType);
-                    // Existing response rows may prevent adding a NOT NULL column.
-                    // Always allow nulls for new columns to avoid migration issues.
-                    var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
-                    await _db.Database.ExecuteSqlRawAsync(sql);
+                    if (newField.FieldType != "section" && newField.FieldType != "title")
+                    {
+                        var sqlType = MapToSqlType(newField.FieldType);
+                        // Existing response rows may prevent adding a NOT NULL column.
+                        // Always allow nulls for new columns to avoid migration issues.
+                        var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
+                        await _db.Database.ExecuteSqlRawAsync(sql);
+                    }
                 }
             }
 
@@ -184,6 +187,8 @@ namespace DynamicFormsApp.Server.Services
 
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title")
+                    continue;
                 sb.Append($", [{fld.Key}] {MapToSqlType(fld.FieldType)} {(fld.IsRequired ? "NOT NULL" : "NULL")}");
             }
             sb.Append(");");

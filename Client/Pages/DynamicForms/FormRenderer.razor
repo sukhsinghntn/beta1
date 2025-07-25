@@ -138,6 +138,10 @@ else
                     case "section":
                         <hr />
                         <h5>@fld.Label</h5>
+                        @if (!string.IsNullOrWhiteSpace(GetInstructions(fld)))
+                        {
+                            <p class="text-muted">@GetInstructions(fld)</p>
+                        }
                         break;
 
                     case "scale":
@@ -234,6 +238,20 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+
+    string? GetInstructions(FormField field)
+    {
+        if (string.IsNullOrWhiteSpace(field.OptionsJson))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(field.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Instructions", out var instEl))
+                return instEl.GetString();
+        }
+        catch { }
+        return null;
+    }
 
     void OnTextChanged(string key, ChangeEventArgs e) =>
         responseData[key] = e.Value?.ToString() ?? "";
