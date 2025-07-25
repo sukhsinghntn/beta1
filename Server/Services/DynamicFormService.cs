@@ -276,12 +276,17 @@ namespace DynamicFormsApp.Server.Services
             await _db.SaveChangesAsync();
         }
 
-        public async Task DeleteFormAsync(int formId, string user)
+        public async Task DeleteFormAsync(int formId, string user, bool isAdmin)
         {
-            var form = await _db.Forms.FirstOrDefaultAsync(f => f.Id == formId && f.CreatedBy == user);
+            var form = await _db.Forms.FirstOrDefaultAsync(f => f.Id == formId);
             if (form == null)
             {
                 throw new InvalidOperationException("Form not found");
+            }
+
+            if (!isAdmin && !string.Equals(form.CreatedBy, user, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Unauthorized");
             }
 
             form.IsDeleted = true;
@@ -327,6 +332,26 @@ namespace DynamicFormsApp.Server.Services
                 .Include(f => f.Fields)
                 .Where(f => f.IsDeleted && !f.IsDraft)
                 .ToListAsync();
+        }
+
+        public async Task<List<Form>> GetInactiveFormsAsync()
+        {
+            return await _db.Forms
+                .Include(f => f.Fields)
+                .Where(f => !f.IsActive && !f.IsDeleted && !f.IsDraft)
+                .ToListAsync();
+        }
+
+        public async Task PublishFormAsync(int formId)
+        {
+            var form = await _db.Forms.FirstOrDefaultAsync(f => f.Id == formId);
+            if (form == null)
+            {
+                throw new InvalidOperationException("Form not found");
+            }
+
+            form.IsActive = true;
+            await _db.SaveChangesAsync();
         }
 
         public async Task<int> GetFormCountAsync()
