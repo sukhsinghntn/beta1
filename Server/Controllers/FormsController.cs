@@ -201,16 +201,51 @@ namespace DynamicFormsApp.Server.Controllers
             return Ok(forms);
         }
 
-        // DELETE /api/forms/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpGet("inactive")]
+        public async Task<ActionResult<IEnumerable<Form>>> GetInactive()
         {
             if (!Request.Cookies.TryGetValue("userName", out var user) || string.IsNullOrEmpty(user))
             {
                 return Unauthorized();
             }
 
-            await _svc.DeleteFormAsync(id, user);
+            var info = await _userSvc.GetUserData(user);
+            if (!string.Equals(info?.Department, "Information Technology", StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized();
+            }
+
+            var forms = await _svc.GetInactiveFormsAsync();
+            return Ok(forms);
+        }
+
+        // DELETE /api/forms/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id, [FromQuery] string? reason)
+        {
+            if (!Request.Cookies.TryGetValue("userName", out var user) || string.IsNullOrEmpty(user))
+            {
+                return Unauthorized();
+            }
+
+            var form = await _svc.GetFormAsync(id);
+            var requester = await _userSvc.GetUserData(user);
+            bool isAdmin = string.Equals(requester?.Department, "Information Technology", StringComparison.OrdinalIgnoreCase);
+
+            if (!isAdmin && !string.Equals(form.CreatedBy, user, StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized();
+            }
+
+            await _svc.DeleteFormAsync(id, user, isAdmin);
+
+            var owner = await _userSvc.GetUserData(form.CreatedBy);
+            if (!string.IsNullOrEmpty(owner?.Email))
+            {
+                var deletedBy = requester?.DisplayName ?? user;
+                await _emailSvc.SendFormDeletedNotification(owner.Email, form.Name, form.Description, deletedBy, reason ?? string.Empty);
+            }
+
             return NoContent();
         }
 
@@ -235,6 +270,24 @@ namespace DynamicFormsApp.Server.Controllers
             }
 
             await _svc.ActivateFormAsync(id, user);
+            return NoContent();
+        }
+
+        [HttpPost("{id}/publish")]
+        public async Task<IActionResult> Publish(int id)
+        {
+            if (!Request.Cookies.TryGetValue("userName", out var user) || string.IsNullOrEmpty(user))
+            {
+                return Unauthorized();
+            }
+
+            var info = await _userSvc.GetUserData(user);
+            if (!string.Equals(info?.Department, "Information Technology", StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized();
+            }
+
+            await _svc.PublishFormAsync(id);
             return NoContent();
         }
 

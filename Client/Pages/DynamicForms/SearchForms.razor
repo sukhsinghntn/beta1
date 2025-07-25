@@ -44,6 +44,9 @@ else
                         {
                             <td>
                                 <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => ChangeOwner(f.Id)">Change Owner</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteForm(f.Id)" title="Delete Form">
+                                    <span class="material-icons">delete</span>
+                                </button>
                             </td>
                         }
                         <td>
@@ -96,5 +99,37 @@ else
             forms = await Http.GetFromJsonAsync<List<Form>>($"api/forms/search?includePrivate={includePrivate}");
             StateHasChanged();
         }
+    }
+
+    private async Task DeleteForm(int id)
+    {
+        var item = forms?.FirstOrDefault(f => f.Id == id);
+        if (item == null)
+        {
+            return;
+        }
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["FormName"] = item.Name
+        };
+        var result = await DialogService.OpenAsync<DeleteFormDialog>(
+            "Delete Form", parameters, new DialogOptions { Width = "400px" });
+        if (result is not string reason || string.IsNullOrWhiteSpace(reason))
+        {
+            return;
+        }
+
+        var encoded = Uri.EscapeDataString(reason);
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"api/forms/{id}?reason={encoded}");
+        await Http.SendAsync(request);
+        forms!.Remove(item);
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Form Deleted",
+            Detail = item.Name
+        });
+        StateHasChanged();
     }
 }
