@@ -35,3 +35,14 @@ window.initListSortable = (selector, dotnetHelper) => {
         onEnd: evt => dotnetHelper.invokeMethodAsync('OnFieldReorder', evt.oldIndex, evt.newIndex)
     });
 };
+
+window.initSectionSortable = (selector, dotnetHelper) => {
+    const container = document.querySelector(selector);
+    if (!container || container.dataset.sortableInit === 'true') return;
+    container.dataset.sortableInit = 'true';
+    new Sortable(container, {
+        animation: 150,
+        handle: '.section-handle',
+        onEnd: evt => dotnetHelper.invokeMethodAsync('OnSectionReorder', evt.oldIndex, evt.newIndex)
+    });
+};
