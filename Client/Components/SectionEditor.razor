@@ -1,0 +1,102 @@
+@using DynamicFormsApp.Shared
+@inject IJSRuntime JS
+
+<div class="card mb-4 shadow-sm section-card" data-id="@Index">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary section-handle">
+                <span class="material-icons">drag_indicator</span>
+            </button>
+            <input class="form-control form-control-sm" placeholder="Section title" @bind="Section.Title" />
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Toggle">
+                <span class="material-icons">@(!Section.Collapsed ? "expand_less" : "expand_more")</span>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" @onclick="() => OnDelete.InvokeAsync(Section)">
+                <span class="material-icons">delete</span>
+            </button>
+        </div>
+    </div>
+    <div class="card-body" style="@(Section.Collapsed ? "display:none" : null)">
+        <textarea class="form-control mb-3" placeholder="Section instructions" @bind="Section.Instructions"></textarea>
+        <div id="@ContainerId">
+            @for (int i = 0; i < Section.Fields.Count; i++)
+            {
+                <FieldEditor Field="Section.Fields[i]"
+                             OnRemove="fld => RemoveField(fld)"
+                             OnDuplicate="fld => DuplicateField(fld)" />
+            }
+        </div>
+        <div class="d-grid mt-2">
+            <button class="btn btn-outline-secondary" @onclick="AddField">+ Add Field</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public DesignerSection Section { get; set; } = new();
+    [Parameter] public int Index { get; set; }
+    [Parameter] public EventCallback<DesignerSection> OnDelete { get; set; }
+
+    private DotNetObjectReference<SectionEditor>? objRef;
+    private string ContainerId => $"section-{Index}-fields";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnFieldReorder(int oldIndex, int newIndex)
+    {
+        if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0 ||
+            oldIndex >= Section.Fields.Count || newIndex >= Section.Fields.Count)
+            return;
+        var item = Section.Fields[oldIndex];
+        Section.Fields.RemoveAt(oldIndex);
+        Section.Fields.Insert(newIndex, item);
+        StateHasChanged();
+    }
+
+    void AddField()
+    {
+        Section.Fields.Add(new DesignerField());
+        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+    }
+
+    void RemoveField(DesignerField fld)
+    {
+        Section.Fields.Remove(fld);
+        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+    }
+
+    void DuplicateField(DesignerField fld)
+    {
+        var copy = new DesignerField
+        {
+            Key = string.Empty,
+            Label = fld.Label,
+            FieldType = fld.FieldType,
+            IsRequired = fld.IsRequired,
+            OptionItems = new List<string>(fld.OptionItems),
+            GridRows = new List<string>(fld.GridRows),
+            GridColumns = new List<string>(fld.GridColumns),
+            ScaleMin = fld.ScaleMin,
+            ScaleMax = fld.ScaleMax
+        };
+        Section.Fields.Insert(Section.Fields.IndexOf(fld) + 1, copy);
+        JS.InvokeVoidAsync("initListSortable", $"#{ContainerId}", objRef!);
+    }
+
+    void Toggle() => Section.Collapsed = !Section.Collapsed;
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}

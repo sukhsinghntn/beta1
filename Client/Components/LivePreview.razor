@@ -115,6 +115,10 @@
             case "section":
                 <hr />
                 <h5>@field.Label</h5>
+                @if (!string.IsNullOrWhiteSpace(field.OptionItems.FirstOrDefault()))
+                {
+                    <p class="text-muted">@field.OptionItems.First()</p>
+                }
                 break;
 
             default:
