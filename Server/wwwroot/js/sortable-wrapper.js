@@ -1,4 +1,4 @@
-export function initSortable(selector, dotnetHelper) {
+window.initSortable = (selector, dotnetHelper) => {
     const container = document.querySelector(selector);
     if (!container) return;
 
@@ -25,7 +25,7 @@ export function initSortable(selector, dotnetHelper) {
     });
 }
 
-export function initListSortable(selector, dotnetHelper) {
+window.initListSortable = (selector, dotnetHelper) => {
     const container = document.querySelector(selector);
     if (!container || container.dataset.sortableInit === 'true') return;
     container.dataset.sortableInit = 'true';
@@ -36,7 +36,7 @@ export function initListSortable(selector, dotnetHelper) {
     });
 }
 
-export function initSectionSortable(selector, dotnetHelper) {
+window.initSectionSortable = (selector, dotnetHelper) => {
     const container = document.querySelector(selector);
     if (!container || container.dataset.sortableInit === 'true') return;
     container.dataset.sortableInit = 'true';
@@ -46,7 +46,3 @@ export function initSectionSortable(selector, dotnetHelper) {
         onEnd: evt => dotnetHelper.invokeMethodAsync('OnSectionReorder', evt.oldIndex, evt.newIndex)
     });
 }
-
-window.initSortable = initSortable;
-window.initListSortable = initListSortable;
-window.initSectionSortable = initSectionSortable;

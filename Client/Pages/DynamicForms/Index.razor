@@ -57,15 +57,13 @@
     private bool notifyOnResponse = false;
     private string notificationEmail = string.Empty;
     private DotNetObjectReference<Index>? objRef;
-    private IJSObjectReference? sortableModule;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             objRef = DotNetObjectReference.Create(this);
-            sortableModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/sortable-wrapper.js");
-            await sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef);
+            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef);
         }
     }
 
@@ -87,20 +85,14 @@
         if (confirmed == true)
         {
             sections.Remove(section);
-            if (sortableModule is not null)
-            {
-                await sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
-            }
+            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
         }
     }
 
     void AddSection()
     {
         sections.Add(new DesignerSection());
-        if (sortableModule is not null)
-        {
-            sortableModule.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
-        }
+        JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
     }
 
     async Task HandleSubmit()
@@ -188,9 +180,5 @@
     public async ValueTask DisposeAsync()
     {
         objRef?.Dispose();
-        if (sortableModule is not null)
-        {
-            await sortableModule.DisposeAsync();
-        }
     }
 }
