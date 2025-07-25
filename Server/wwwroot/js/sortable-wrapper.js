@@ -34,6 +34,8 @@ window.initSectionSortable = (selector, dotnetHelper) => {
     new Sortable(container, {
         animation: 150,
         handle: '.section-drag-handle',
+        draggable: '.section-wrapper',
+        filter: '.section-dropzone, .section-dropzone *',
         onEnd: evt => dotnetHelper.invokeMethodAsync('OnSectionReorder', evt.oldIndex, evt.newIndex)
     });
 };
