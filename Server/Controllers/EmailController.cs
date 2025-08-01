@@ -23,6 +23,20 @@ namespace DynamicFormsApp.Server.Controllers
             return Ok();
         }
 
+        [HttpPost("feature")]
+        public async Task<IActionResult> SendFeatureRequestEmail([FromBody] EmailModel email)
+        {
+            await _emailService.SendFeatureRequestEmail(email);
+            return Ok();
+        }
+
+        [HttpPost("feedback")]
+        public async Task<IActionResult> SendFeedbackEmail([FromBody] EmailModel email)
+        {
+            await _emailService.SendFeedbackEmail(email);
+            return Ok();
+        }
+
         [HttpPost("formresponse")]
         public async Task<IActionResult> SendFormResponseEmail([FromBody] FormResponseNotification model)
         {

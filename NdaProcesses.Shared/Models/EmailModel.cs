@@ -10,6 +10,11 @@ namespace DynamicFormsApp.Shared.Models
         public int? Id { get; set; }
         public string? UserName { get; set; }
 
+        // Reporter details
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? ReporterEmail { get; set; }
+
         public string? TOUserName { get; set; }
         public List<string>? Emails { get; set; }
 

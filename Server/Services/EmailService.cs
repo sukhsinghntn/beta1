@@ -26,7 +26,7 @@ namespace DynamicFormsApp.Server.Services
                 From = new MailAddress("NDABugReport@ntnanderson.com"),
                 Subject = $"Bug Report for Application Device Tracking",
                 IsBodyHtml = true,
-                Body = $"{email.UserName} has reported a bug:<br/><br/>{email.Body}" +
+                Body = $"{email.FirstName} {email.LastName} ({email.ReporterEmail}) has reported a bug:<br/><br/>{email.Body}" +
                        $"<br/><br/><a href='{email.Link}'>View the page</a>."
             };
 
@@ -34,6 +34,64 @@ namespace DynamicFormsApp.Server.Services
             mail.To.Add(_configuration["Email:BugReportEmailTo"]);
 
             // Attach any files
+            if (email.Attachments != null)
+            {
+                foreach (var att in email.Attachments)
+                {
+                    var stream = new MemoryStream(att.Content);
+                    mail.Attachments.Add(new Attachment(stream, att.Name));
+                }
+            }
+
+            using var client = new SmtpClient(_configuration["Email:IP"])
+            {
+                Port = int.Parse(_configuration["Email:Port"]!)
+            };
+            await client.SendMailAsync(mail);
+        }
+
+        public async Task SendFeatureRequestEmail(EmailModel email)
+        {
+            var mail = new MailMessage
+            {
+                From = new MailAddress("NDABugReport@ntnanderson.com"),
+                Subject = $"Feature Request for Application Device Tracking",
+                IsBodyHtml = true,
+                Body = $"{email.FirstName} {email.LastName} ({email.ReporterEmail}) has requested a feature:<br/><br/>{email.Body}" +
+                       $"<br/><br/><a href='{email.Link}'>View the page</a>."
+            };
+
+            mail.To.Add(_configuration["Email:BugReportEmailTo"]);
+
+            if (email.Attachments != null)
+            {
+                foreach (var att in email.Attachments)
+                {
+                    var stream = new MemoryStream(att.Content);
+                    mail.Attachments.Add(new Attachment(stream, att.Name));
+                }
+            }
+
+            using var client = new SmtpClient(_configuration["Email:IP"])
+            {
+                Port = int.Parse(_configuration["Email:Port"]!)
+            };
+            await client.SendMailAsync(mail);
+        }
+
+        public async Task SendFeedbackEmail(EmailModel email)
+        {
+            var mail = new MailMessage
+            {
+                From = new MailAddress("NDABugReport@ntnanderson.com"),
+                Subject = $"Website Feedback",
+                IsBodyHtml = true,
+                Body = $"{email.FirstName} {email.LastName} ({email.ReporterEmail}) sent feedback:<br/><br/>{email.Body}" +
+                       $"<br/><br/><a href='{email.Link}'>View the page</a>."
+            };
+
+            mail.To.Add(_configuration["Email:BugReportEmailTo"]);
+
             if (email.Attachments != null)
             {
                 foreach (var att in email.Attachments)

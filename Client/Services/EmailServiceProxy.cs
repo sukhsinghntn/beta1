@@ -20,6 +20,16 @@ namespace DynamicFormsApp.Client.Services
             await _httpClient.PostAsJsonAsync("api/email/bug/", email);
         }
 
+        public async Task SendFeatureRequestEmail(EmailModel email)
+        {
+            await _httpClient.PostAsJsonAsync("api/email/feature", email);
+        }
+
+        public async Task SendFeedbackEmail(EmailModel email)
+        {
+            await _httpClient.PostAsJsonAsync("api/email/feedback", email);
+        }
+
         public async Task SendFormResponseNotification(string toEmail, string formName, int formId)
         {
             var payload = new { toEmail, formName, formId };
