@@ -217,21 +217,22 @@ namespace DynamicFormsApp.Server.Services
             var rawName = SanitizeKey(form.Name);
             var tableName = $"Form_{formId}_{rawName}";
 
-            var cols = string.Join(", ", values.Keys.Select(k => $"[{k}]")) + ", CreatedAt";
-            var paramNames = string.Join(", ",
-                values.Keys.Select((k, i) => $"@p{i}")
-                           .Concat(new[] { "@p_created" }));
-            if (form.RequireLogin)
-            {
-                cols += ", ResponderName";
-                paramNames += ", @p_responder";
-            }
+            var validFields = form.Fields
+                .Where(f => f.FieldType != "section" && f.FieldType != "title")
+                .Select(f => f.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
+            var filtered = values
+                .Where(kv => validFields.Contains(kv.Key))
+                .ToDictionary(k => k.Key, v => v.Value);
+
+            var cols = string.Join(", ", filtered.Keys.Select(k => $"[{k}]"));
+            var paramNames = string.Join(", ",
+                filtered.Keys.Select((k, i) => $"@p{i}"));
 
             var sqlParams = new List<SqlParameter>();
             int idx = 0;
-            foreach (var kv in values)
+            foreach (var kv in filtered)
             {
                 object raw = kv.Value;
                 if (raw is JsonElement je)
@@ -259,11 +260,18 @@ namespace DynamicFormsApp.Server.Services
                 idx++;
             }
 
+            cols = string.IsNullOrEmpty(cols) ? "CreatedAt" : cols + ", CreatedAt";
+            paramNames = string.IsNullOrEmpty(paramNames) ? "@p_created" : paramNames + ", @p_created";
             sqlParams.Add(new SqlParameter("@p_created", DateTime.UtcNow));
+
             if (form.RequireLogin)
             {
+                cols += ", ResponderName";
+                paramNames += ", @p_responder";
                 sqlParams.Add(new SqlParameter("@p_responder", (object?)responderName ?? DBNull.Value));
             }
+
+            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
             await _db.Database.ExecuteSqlRawAsync(sql, sqlParams.ToArray());
 
             return form;

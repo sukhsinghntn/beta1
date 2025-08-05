@@ -220,6 +220,11 @@ else
 
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title")
+                {
+                    continue;
+                }
+
                 responseData[fld.Key] = fld.FieldType switch
                 {
                     "checkbox" => new List<string>(),
@@ -350,7 +355,15 @@ else
             }
         }
 
-        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", responseData);
+        var submitData = responseData
+            .Where(kv =>
+                form.Fields.Any(f =>
+                    f.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) &&
+                    f.FieldType != "section" &&
+                    f.FieldType != "title"))
+            .ToDictionary(k => k.Key, v => v.Value);
+
+        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
 
         var user = await CookieHelper.LoginStatus();
         if (string.IsNullOrEmpty(user))
