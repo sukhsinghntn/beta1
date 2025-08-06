@@ -20,32 +20,14 @@
             </div>
         </div>
 
-        <div class="row g-2">
-            <div class="col-md-4">
-                <select class="form-select" @bind="Field.FieldType" @bind:after="OnTypeChanged">
-                    <option value="text">Short Answer</option>
-                    <option value="textarea">Paragraph</option>
-                    <option value="radio">Multiple Choice</option>
-                    <option value="checkbox">Checkbox</option>
-                    <option value="dropdown">Dropdown</option>
-                    <option value="date">Date</option>
-                    <option value="time">Time</option>
-                    <option value="datetime">Date Time</option>
-                    <option value="scale">Linear Scale</option>
-                    <option value="grid_radio">Multiple Choice Grid</option>
-                    <option value="grid_checkbox">Checkbox Grid</option>
-                    <option value="title">Title</option>
-                    <option value="section">Section</option>
-                    <option value="file">Upload File</option>
-                </select>
+        @if (Field.FieldType is "text" or "textarea")
+        {
+            <div class="mb-3">
+                <label class="form-label">Placeholder Text</label>
+                <input class="form-control" @bind="Field.Placeholder" placeholder="e.g., Enter your answer" />
+                <div class="form-text">Shown inside the field until the user enters a value.</div>
             </div>
-            @if (Field.FieldType is "text" or "textarea")
-            {
-                <div class="col-md-8">
-                    <input class="form-control" placeholder="Placeholder" @bind="Field.Placeholder" />
-                </div>
-            }
-        </div>
+        }
 
         @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
         {
@@ -143,21 +125,4 @@
         _ => type
     };
 
-    void OnTypeChanged()
-    {
-        if (Field.FieldType == "text")
-        {
-            if (string.IsNullOrWhiteSpace(Field.Placeholder))
-                Field.Placeholder = "Short answer";
-        }
-        else if (Field.FieldType == "textarea")
-        {
-            if (string.IsNullOrWhiteSpace(Field.Placeholder))
-                Field.Placeholder = "Paragraph";
-        }
-        else
-        {
-            Field.Placeholder = string.Empty;
-        }
-    }
 }
