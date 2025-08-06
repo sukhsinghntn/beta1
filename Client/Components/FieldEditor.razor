@@ -28,12 +28,11 @@
                 <div class="form-text">Shown inside the field until the user enters a value.</div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Minimum Characters</label>
-                <input type="number" class="form-control" @bind="Field.MinCharLimit" min="0" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Maximum Characters</label>
-                <input type="number" class="form-control" @bind="Field.CharLimit" min="1" />
+                <label class="form-label">Character Limits</label>
+                <div class="d-flex gap-2">
+                    <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.MinCharLimit" min="0" placeholder="Min" />
+                    <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.CharLimit" min="1" placeholder="Max" />
+                </div>
             </div>
         }
 
@@ -143,6 +142,7 @@
         "radio" => "Multiple Choice",
         "checkbox" => "Checkbox",
         "dropdown" => "Dropdown",
+        "user" => "User Dropdown",
         "date" => "Date",
         "time" => "Time",
         "datetime" => "Date Time",

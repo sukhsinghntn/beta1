@@ -625,6 +625,7 @@ namespace DynamicFormsApp.Server.Services
             "file" => "NVARCHAR(MAX)",
             "checkbox" => "NVARCHAR(MAX)",      // Store as JSON array
             "dropdown" => "NVARCHAR(255)",
+            "user" => "NVARCHAR(255)",
             "radio" => "NVARCHAR(255)",
             "textarea" => "NVARCHAR(MAX)",
             "grid_radio" => "NVARCHAR(MAX)",    // JSON object

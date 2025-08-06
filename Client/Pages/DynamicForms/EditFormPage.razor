@@ -64,6 +64,7 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                 <div class="draggable-field" draggable="true" data-type="radio"><span class="material-icons me-1">radio_button_checked</span> Multiple Choice</div>
                 <div class="draggable-field" draggable="true" data-type="checkbox"><span class="material-icons me-1">check_box</span> Checkbox</div>
                 <div class="draggable-field" draggable="true" data-type="dropdown"><span class="material-icons me-1">arrow_drop_down_circle</span> Dropdown</div>
+                <div class="draggable-field" draggable="true" data-type="user"><span class="material-icons me-1">person</span> User Dropdown</div>
                 <div class="draggable-field" draggable="true" data-type="date"><span class="material-icons me-1">event</span> Date</div>
                 <div class="draggable-field" draggable="true" data-type="time"><span class="material-icons me-1">schedule</span> Time</div>
                 <div class="draggable-field" draggable="true" data-type="datetime"><span class="material-icons me-1">event_available</span> Date Time</div>
@@ -74,13 +75,6 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                 <div class="draggable-field" draggable="true" data-type="section"><span class="material-icons me-1">view_headline</span> Section</div>
                 <div class="draggable-field" draggable="true" data-type="file"><span class="material-icons me-1">upload_file</span> Upload File</div>
             </div>
-            <select class="form-select mt-3" @bind="selectedUser">
-                <option value="">Select user...</option>
-                @foreach (var u in directoryUsers)
-                {
-                    <option value="@u.UserName">@u.DisplayName - @u.Department - @u.Location</option>
-                }
-            </select>
         </div>
         <div class="col-md-9">
             <div id="sections-container">
@@ -174,8 +168,6 @@ else
     private string notificationEmail = string.Empty;
     private bool isDraft = false;
     private UserModel? currentUser;
-    private List<UserModel> directoryUsers = new();
-    private string? selectedUser;
     private DotNetObjectReference<DynamicFormsApp.Client.Pages.DynamicForms.EditFormPage>? objRef;
     private string? deletedMessage;
     private DeletedFormInfo? unavailableInfo;
@@ -196,7 +188,6 @@ else
 
             currentUser = await UserService.GetUserData(user);
             notificationEmail = currentUser?.Email ?? string.Empty;
-            directoryUsers = await UserService.GetAllUsers();
 
             var resp = await Http.GetAsync($"api/forms/{FormId}");
             if (!resp.IsSuccessStatusCode)
@@ -485,6 +476,11 @@ List<object> BuildFieldPayload()
                 var opts = f.OptionItems.Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
                 var rowsList = f.GridRows.Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
                 var colsList = f.GridColumns.Where(o => !string.IsNullOrWhiteSpace(o)).ToList();
+                string? optionsJson = opts.Count > 0 ? JsonSerializer.Serialize(opts)
+                    : rowsList.Count > 0 || colsList.Count > 0 ? JsonSerializer.Serialize(new { Rows = rowsList, Columns = colsList })
+                    : f.FieldType == "scale" ? JsonSerializer.Serialize(new { Min = f.ScaleMin, Max = f.ScaleMax })
+                    : !string.IsNullOrWhiteSpace(f.Instructions) ? JsonSerializer.Serialize(new { Instructions = f.Instructions })
+                    : null;
                 list.Add(new
                 {
                     f.Key,
@@ -496,13 +492,7 @@ List<object> BuildFieldPayload()
                     f.IsRequired,
                     Row = rowCounter,
                     Column = c,
-                OptionsJson = JsonSerializer.Serialize(
-                        opts.Count > 0 ? opts :
-                        rowsList.Count > 0 || colsList.Count > 0 ? new { Rows = rowsList, Columns = colsList } :
-                        f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } :
-                        !string.IsNullOrWhiteSpace(f.Instructions) ? new { Instructions = f.Instructions } :
-                        new object()
-                    )
+                    OptionsJson = optionsJson
                 });
             }
             rowCounter++;
