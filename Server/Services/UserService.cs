@@ -160,6 +160,70 @@ namespace DynamicFormsApp.Server.Services
             return list.OrderBy(u => u.DisplayName).ToList();
         }
 
+        public async Task<List<string>> GetDepartments()
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using var entry = new DirectoryEntry(
+                    _configuration["LDAP:LDAPPath"],
+                    _configuration["LDAP:UserName"],
+                    _configuration["LDAP:Password"],
+                    AuthenticationTypes.Secure);
+                using var searcher = new DirectorySearcher(entry)
+                {
+                    Filter = "(&(objectClass=user)(department=*))",
+                    PageSize = 1000
+                };
+                searcher.PropertiesToLoad.Add("department");
+                foreach (SearchResult result in searcher.FindAll())
+                {
+                    if (result.Properties["department"].Count == 0) continue;
+                    var dept = result.Properties["department"][0]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(dept))
+                        set.Add(dept);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching departments: {ex.Message}");
+            }
+
+            return set.OrderBy(d => d).ToList();
+        }
+
+        public async Task<List<string>> GetLocations()
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using var entry = new DirectoryEntry(
+                    _configuration["LDAP:LDAPPath"],
+                    _configuration["LDAP:UserName"],
+                    _configuration["LDAP:Password"],
+                    AuthenticationTypes.Secure);
+                using var searcher = new DirectorySearcher(entry)
+                {
+                    Filter = "(&(objectClass=user)(physicalDeliveryOfficeName=*))",
+                    PageSize = 1000
+                };
+                searcher.PropertiesToLoad.Add("physicalDeliveryOfficeName");
+                foreach (SearchResult result in searcher.FindAll())
+                {
+                    if (result.Properties["physicalDeliveryOfficeName"].Count == 0) continue;
+                    var loc = result.Properties["physicalDeliveryOfficeName"][0]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(loc))
+                        set.Add(loc);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching locations: {ex.Message}");
+            }
+
+            return set.OrderBy(l => l).ToList();
+        }
+
         public async Task<List<UserModel>> SearchUsers(string term)
         {
             var list = new List<UserModel>();

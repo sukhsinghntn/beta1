@@ -107,7 +107,25 @@ else
                             <option value="" disabled selected>Select user...</option>
                             @foreach (var u in directoryUsers)
                             {
-                                <option value="@u.UserName">@u.DisplayName - @u.Department - @u.Location</option>
+                                <option value="@u.DisplayName">@u.DisplayName - @u.Department - @u.Location</option>
+                            }
+                        </select>
+                        break;
+                    case "department":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select department...</option>
+                            @foreach (var d in departments)
+                            {
+                                <option value="@d">@d</option>
+                            }
+                        </select>
+                        break;
+                    case "location":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select location...</option>
+                            @foreach (var l in locations)
+                            {
+                                <option value="@l">@l</option>
                             }
                         </select>
                         break;
@@ -201,6 +219,8 @@ else
     private Form form;
     private Dictionary<string, object> responseData = new();
     private List<UserModel> directoryUsers = new();
+    private List<string> departments = new();
+    private List<string> locations = new();
     private string? statusMessage;
     private DeletedFormInfo? unavailableInfo;
 
@@ -228,6 +248,14 @@ else
             if (form.Fields.Any(f => f.FieldType == "user"))
             {
                 directoryUsers = await UserService.GetAllUsers();
+            }
+            if (form.Fields.Any(f => f.FieldType == "department"))
+            {
+                departments = await UserService.GetDepartments();
+            }
+            if (form.Fields.Any(f => f.FieldType == "location"))
+            {
+                locations = await UserService.GetLocations();
             }
 
             var user = await CookieHelper.LoginStatus();

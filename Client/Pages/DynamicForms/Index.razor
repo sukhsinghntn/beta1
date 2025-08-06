@@ -57,7 +57,6 @@
                 <div class="draggable-field" draggable="true" data-type="radio"><span class="material-icons me-1">radio_button_checked</span> Multiple Choice</div>
                 <div class="draggable-field" draggable="true" data-type="checkbox"><span class="material-icons me-1">check_box</span> Checkbox</div>
                 <div class="draggable-field" draggable="true" data-type="dropdown"><span class="material-icons me-1">arrow_drop_down_circle</span> Dropdown</div>
-                <div class="draggable-field" draggable="true" data-type="user"><span class="material-icons me-1">person</span> User Dropdown</div>
                 <div class="draggable-field" draggable="true" data-type="date"><span class="material-icons me-1">event</span> Date</div>
                 <div class="draggable-field" draggable="true" data-type="time"><span class="material-icons me-1">schedule</span> Time</div>
                 <div class="draggable-field" draggable="true" data-type="datetime"><span class="material-icons me-1">event_available</span> Date Time</div>
@@ -67,6 +66,12 @@
                 <div class="draggable-field" draggable="true" data-type="title"><span class="material-icons me-1">title</span> Title</div>
                 <div class="draggable-field" draggable="true" data-type="section"><span class="material-icons me-1">view_headline</span> Section</div>
                 <div class="draggable-field" draggable="true" data-type="file"><span class="material-icons me-1">upload_file</span> Upload File</div>
+            </div>
+            <h6 class="mt-3">User Fields</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <div class="draggable-field" draggable="true" data-type="user"><span class="material-icons me-1">person</span> User Dropdown</div>
+                <div class="draggable-field" draggable="true" data-type="department"><span class="material-icons me-1">apartment</span> Department Dropdown</div>
+                <div class="draggable-field" draggable="true" data-type="location"><span class="material-icons me-1">location_on</span> Location Dropdown</div>
             </div>
         </div>
         <div class="col-md-9">
@@ -245,6 +250,20 @@ else
     DesignerField CreateField(string fieldType) => new DesignerField
     {
         FieldType = fieldType,
+        Key = fieldType switch
+        {
+            "user" => "select a user",
+            "department" => "department",
+            "location" => "location",
+            _ => string.Empty
+        },
+        Label = fieldType switch
+        {
+            "user" => "Select a user",
+            "department" => "Department",
+            "location" => "Location",
+            _ => string.Empty
+        },
         Placeholder = fieldType == "text" ? "Short answer" :
                       fieldType == "textarea" ? "Paragraph" : string.Empty
     };
@@ -280,7 +299,7 @@ else
     {
         var copy = new DesignerField
         {
-            Key = string.Empty,
+            Key = field.Key,
             Label = field.Label,
             FieldType = field.FieldType,
             IsRequired = field.IsRequired,
@@ -402,6 +421,7 @@ else
         {
             list.Add(new
             {
+                Key = sec.Key,
                 Label = sec.Title,
                 FieldType = "section",
                 IsRequired = false,
@@ -427,6 +447,7 @@ else
                         : null;
                     list.Add(new
                     {
+                        f.Key,
                         f.Label,
                         f.FieldType,
                         f.Placeholder,
