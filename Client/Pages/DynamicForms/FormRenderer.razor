@@ -8,6 +8,7 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject CookieHelper CookieHelper
+@inject IUserService UserService
 
 <h3>@(!string.IsNullOrEmpty(statusMessage) || unavailableInfo != null
         ? "Form Not Available"
@@ -54,12 +55,15 @@ else
                 {
                     case "text":
                         <input type="text" class="form-control"
+                               placeholder="@fld.Placeholder"
                                value="@GetString(fld.Key)"
+                               maxlength="@fld.CharLimit"
+                               minlength="@fld.MinCharLimit"
                                @onchange="e => OnTextChanged(fld.Key, e)" />
                         break;
 
                     case "textarea":
-                        <textarea class="form-control"
+                        <textarea class="form-control" placeholder="@fld.Placeholder" maxlength="@fld.CharLimit" minlength="@fld.MinCharLimit"
                                   @onchange="e => OnTextChanged(fld.Key, e)">@GetString(fld.Key)</textarea>
                         break;
 
@@ -94,6 +98,34 @@ else
                             @foreach (var opt in ddOptions)
                             {
                                 <option value="@opt">@opt</option>
+                            }
+                        </select>
+                        break;
+
+                    case "user":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select user...</option>
+                            @foreach (var u in directoryUsers)
+                            {
+                                <option value="@u.DisplayName">@u.DisplayName - @u.Department - @u.Location</option>
+                            }
+                        </select>
+                        break;
+                    case "department":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select department...</option>
+                            @foreach (var d in departments)
+                            {
+                                <option value="@d">@d</option>
+                            }
+                        </select>
+                        break;
+                    case "location":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select location...</option>
+                            @foreach (var l in locations)
+                            {
+                                <option value="@l">@l</option>
                             }
                         </select>
                         break;
@@ -137,7 +169,14 @@ else
 
                     case "section":
                         <hr />
-                        <h5>@fld.Label</h5>
+                        @if (!string.IsNullOrWhiteSpace(fld.Label))
+                        {
+                            <h5>@fld.Label</h5>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(GetInstructions(fld)))
+                        {
+                            <p class="text-muted">@GetInstructions(fld)</p>
+                        }
                         break;
 
                     case "scale":
@@ -179,6 +218,9 @@ else
 
     private Form form;
     private Dictionary<string, object> responseData = new();
+    private List<UserModel> directoryUsers = new();
+    private List<string> departments = new();
+    private List<string> locations = new();
     private string? statusMessage;
     private DeletedFormInfo? unavailableInfo;
 
@@ -203,7 +245,25 @@ else
 
             form = await resp.Content.ReadFromJsonAsync<Form>();
 
+            if (form.Fields.Any(f => f.FieldType == "user"))
+            {
+                directoryUsers = await UserService.GetAllUsers();
+            }
+            if (form.Fields.Any(f => f.FieldType == "department"))
+            {
+                departments = await UserService.GetDepartments();
+            }
+            if (form.Fields.Any(f => f.FieldType == "location"))
+            {
+                locations = await UserService.GetLocations();
+            }
+
             var user = await CookieHelper.LoginStatus();
+            UserModel? currentUser = null;
+            if (!string.IsNullOrEmpty(user))
+            {
+                currentUser = await UserService.GetUserData(user);
+            }
             if (form.RequireLogin && string.IsNullOrEmpty(user))
             {
                 var ret = Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri));
@@ -211,8 +271,15 @@ else
                 return;
             }
 
+            form.Fields = FilterFieldsBySectionVisibility(form.Fields, currentUser);
+
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title")
+                {
+                    continue;
+                }
+
                 responseData[fld.Key] = fld.FieldType switch
                 {
                     "checkbox" => new List<string>(),
@@ -234,6 +301,65 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+
+    string? GetInstructions(FormField field)
+    {
+        if (string.IsNullOrWhiteSpace(field.OptionsJson))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(field.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Instructions", out var instEl))
+                return instEl.GetString();
+        }
+        catch { }
+        return null;
+    }
+
+    List<FormField> FilterFieldsBySectionVisibility(IEnumerable<FormField> fields, UserModel? user)
+    {
+        if (user == null) return fields.ToList();
+        var ordered = fields.OrderBy(f => f.Row ?? 0).ThenBy(f => f.Column ?? 0).ToList();
+        var result = new List<FormField>();
+        bool sectionVisible = true;
+        foreach (var fld in ordered)
+        {
+            if (fld.FieldType == "section")
+            {
+                sectionVisible = IsSectionVisible(fld, user);
+                if (sectionVisible)
+                    result.Add(fld);
+                continue;
+            }
+            if (sectionVisible)
+                result.Add(fld);
+        }
+        return result;
+    }
+
+    bool IsSectionVisible(FormField sectionField, UserModel user)
+    {
+        if (string.IsNullOrWhiteSpace(sectionField.OptionsJson))
+            return true;
+        try
+        {
+            using var doc = JsonDocument.Parse(sectionField.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Departments", out var depEl) && depEl.ValueKind == JsonValueKind.Array)
+            {
+                var deps = depEl.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (deps.Count > 0 && !deps.Any(d => string.Equals(d, user.Department, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+            }
+            if (doc.RootElement.TryGetProperty("Locations", out var locEl) && locEl.ValueKind == JsonValueKind.Array)
+            {
+                var locs = locEl.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (locs.Count > 0 && !locs.Any(l => string.Equals(l, user.Location, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+            }
+        }
+        catch { }
+        return true;
+    }
 
     void OnTextChanged(string key, ChangeEventArgs e) =>
         responseData[key] = e.Value?.ToString() ?? "";
@@ -314,6 +440,34 @@ else
     {
         foreach (var fld in form.Fields)
         {
+            if (fld.FieldType == "text" || fld.FieldType == "textarea")
+            {
+                if (responseData.TryGetValue(fld.Key, out var valObj) && valObj is string s)
+                {
+                    if (fld.MinCharLimit.HasValue && s.Length < fld.MinCharLimit.Value)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Character limit",
+                            Detail = $"'{fld.Label}' requires at least {fld.MinCharLimit} characters (currently {s.Length}).",
+                        });
+                        return;
+                    }
+
+                    if (fld.CharLimit.HasValue && s.Length > fld.CharLimit.Value)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Character limit",
+                            Detail = $"'{fld.Label}' allows {fld.CharLimit} characters (currently {s.Length}).",
+                        });
+                        return;
+                    }
+                }
+            }
+
             if (!fld.IsRequired)
                 continue;
 
@@ -323,13 +477,21 @@ else
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Missing answer",
-                    Detail = $"Please fill out '{fld.Label}'."
+                    Detail = $"Please fill out '{fld.Label}'.",
                 });
                 return;
             }
         }
 
-        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", responseData);
+        var submitData = responseData
+            .Where(kv =>
+                form.Fields.Any(f =>
+                    f.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) &&
+                    f.FieldType != "section" &&
+                    f.FieldType != "title"))
+            .ToDictionary(k => k.Key, v => v.Value);
+
+        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
 
         var user = await CookieHelper.LoginStatus();
         if (string.IsNullOrEmpty(user))

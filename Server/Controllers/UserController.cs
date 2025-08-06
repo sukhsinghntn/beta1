@@ -48,5 +48,19 @@ namespace DynamicFormsApp.Server.Controllers
             var users = await _userService.SearchUsers(term ?? string.Empty);
             return Ok(users);
         }
+
+        [HttpGet("departments")]
+        public async Task<ActionResult<IEnumerable<string>>> Departments()
+        {
+            var list = await _userService.GetDepartments();
+            return Ok(list);
+        }
+
+        [HttpGet("locations")]
+        public async Task<ActionResult<IEnumerable<string>>> Locations()
+        {
+            var list = await _userService.GetLocations();
+            return Ok(list);
+        }
     }
 }
