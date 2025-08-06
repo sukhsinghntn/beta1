@@ -18,36 +18,36 @@
 <p class="text-muted">Drag fields to reorder or move them between rows. Each row can have up to four columns.</p>
 
 <button class="btn btn-secondary position-fixed top-0 end-0 m-3" style="z-index:1050;" @onclick="TogglePreview">
-    @(isPreviewMode ? "Preview" : "Building")
+    @(isPreviewMode ? "Building" : "Preview")
 </button>
-
-<div class="mb-4">
-    <label class="form-label">Form Name</label>
-    <input class="form-control form-control-lg" placeholder="Enter your form title" @bind="formName" />
-</div>
-<div class="mb-4">
-    <label class="form-label">Description</label>
-    <textarea class="form-control" placeholder="Enter a description" @bind="formDescription"></textarea>
-</div>
-
-<div class="form-check form-switch mb-4">
-    <input class="form-check-input" type="checkbox" id="loginToggle" @bind="requireLogin" />
-    <label class="form-check-label" for="loginToggle">Require login to access form</label>
-</div>
-<div class="form-check form-switch mb-4">
-    <input class="form-check-input" type="checkbox" id="notifyToggle" @bind="notifyOnResponse" />
-    <label class="form-check-label" for="notifyToggle">Email on new response</label>
-</div>
-@if (notifyOnResponse)
-{
-    <div class="mb-3">
-        <label class="form-label">Notification Email</label>
-        <input class="form-control" placeholder="@currentUser?.Email" @bind="notificationEmail" />
-    </div>
-}
 
 @if (!isPreviewMode)
 {
+    <div class="mb-4">
+        <label class="form-label">Form Name</label>
+        <input class="form-control form-control-lg" placeholder="Enter your form title" @bind="formName" />
+    </div>
+    <div class="mb-4">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" placeholder="Enter a description" @bind="formDescription"></textarea>
+    </div>
+
+    <div class="form-check form-switch mb-4">
+        <input class="form-check-input" type="checkbox" id="loginToggle" @bind="requireLogin" />
+        <label class="form-check-label" for="loginToggle">Require login to access form</label>
+    </div>
+    <div class="form-check form-switch mb-4">
+        <input class="form-check-input" type="checkbox" id="notifyToggle" @bind="notifyOnResponse" />
+        <label class="form-check-label" for="notifyToggle">Email on new response</label>
+    </div>
+    @if (notifyOnResponse)
+    {
+        <div class="mb-3">
+            <label class="form-label">Notification Email</label>
+            <input class="form-control" placeholder="@currentUser?.Email" @bind="notificationEmail" />
+        </div>
+    }
+
     <div class="row">
         <div class="col-md-3" style="position:sticky;top:75px;max-height:calc(100vh - 90px);overflow-y:auto;">
             <h5 class="mb-3">Toolbox</h5>
@@ -459,14 +459,24 @@ else
             if ((f.FieldType == "radio" || f.FieldType == "checkbox" || f.FieldType == "dropdown") &&
                 !f.OptionItems.Any(o => !string.IsNullOrWhiteSpace(o)))
             {
-                await DialogService.Alert($"Add at least one option for '{f.Label}'.", "Options Required");
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Options Required",
+                    Detail = $"Add at least one option for '{f.Label}'."
+                });
                 return;
             }
 
             if ((f.FieldType == "grid_radio" || f.FieldType == "grid_checkbox") &&
                 (!f.GridRows.Any(r => !string.IsNullOrWhiteSpace(r)) || !f.GridColumns.Any(c => !string.IsNullOrWhiteSpace(c))))
             {
-                await DialogService.Alert($"Add at least one row and column for '{f.Label}'.", "Options Required");
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Options Required",
+                    Detail = $"Add at least one row and column for '{f.Label}'."
+                });
                 return;
             }
         }
