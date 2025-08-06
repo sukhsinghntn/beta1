@@ -24,7 +24,7 @@ else if (!string.IsNullOrEmpty(deletedMessage))
 }
 <p class="text-muted">Drag fields to reorder or move them between rows. Each row can have up to four columns.</p>
 
-<button class="btn btn-secondary position-fixed top-0 end-0 m-3" style="z-index:1050;" @onclick="TogglePreview">
+<button class="btn btn-secondary preview-toggle" @onclick="TogglePreview">
     @(isPreviewMode ? "Building" : "Preview")
 </button>
 

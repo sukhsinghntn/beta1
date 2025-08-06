@@ -1,7 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components
-@using Microsoft.JSInterop
 @using DynamicFormsApp.Shared
-@implements IDisposable
 
 <div class="card mb-3 shadow-sm field-card" @attributes="AdditionalAttributes">
     <div class="card-body">
@@ -33,13 +31,16 @@
         @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
         {
             <label class="form-label mt-3">Options</label>
-            <div id="@optionListId">
+            <div>
                 @foreach (var (opt, index) in Field.OptionItems.Select((val, idx) => (val, idx)))
                 {
                     <div class="d-flex align-items-center mb-1">
-                        <span class="material-icons text-muted drag-handle">drag_indicator</span>
                         <input class="form-control flex-grow-1" @bind="Field.OptionItems[index]" />
-                        <button class="btn btn-outline-danger ms-1" @onclick="() => Field.OptionItems.RemoveAt(index)">×</button>
+                        <div class="btn-group btn-group-sm ms-1">
+                            <button class="btn btn-outline-secondary" @onclick="() => MoveOptionUp(index)"><span class="material-icons">arrow_upward</span></button>
+                            <button class="btn btn-outline-secondary" @onclick="() => MoveOptionDown(index)"><span class="material-icons">arrow_downward</span></button>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.OptionItems.RemoveAt(index)">×</button>
                     </div>
                 }
             </div>
@@ -53,13 +54,16 @@
             <div class="row mt-3">
                 <div class="col-md-6">
                     <label class="form-label">Grid Rows</label>
-                    <div id="@rowListId">
+                    <div>
                         @foreach (var (row, idx) in Field.GridRows.Select((r, i) => (r, i)))
                         {
                             <div class="d-flex align-items-center mb-1">
-                                <span class="material-icons text-muted drag-handle">drag_indicator</span>
                                 <input class="form-control flex-grow-1" @bind="Field.GridRows[idx]" />
-                                <button class="btn btn-outline-danger ms-1" @onclick="() => Field.GridRows.RemoveAt(idx)">×</button>
+                                <div class="btn-group btn-group-sm ms-1">
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveRowUp(idx)"><span class="material-icons">arrow_upward</span></button>
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveRowDown(idx)"><span class="material-icons">arrow_downward</span></button>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.GridRows.RemoveAt(idx)">×</button>
                             </div>
                         }
                     </div>
@@ -70,13 +74,16 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Grid Columns</label>
-                    <div id="@colListId">
+                    <div>
                         @foreach (var (col, idx) in Field.GridColumns.Select((c, i) => (c, i)))
                         {
                             <div class="d-flex align-items-center mb-1">
-                                <span class="material-icons text-muted drag-handle">drag_indicator</span>
                                 <input class="form-control flex-grow-1" @bind="Field.GridColumns[idx]" />
-                                <button class="btn btn-outline-danger ms-1" @onclick="() => Field.GridColumns.RemoveAt(idx)">×</button>
+                                <div class="btn-group btn-group-sm ms-1">
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveColumnUp(idx)"><span class="material-icons">arrow_upward</span></button>
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveColumnDown(idx)"><span class="material-icons">arrow_downward</span></button>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.GridColumns.RemoveAt(idx)">×</button>
                             </div>
                         }
                     </div>
@@ -118,12 +125,6 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
 
-    [Inject] IJSRuntime JS { get; set; } = default!;
-    private DotNetObjectReference<FieldEditor>? objRef;
-    private readonly string optionListId = $"opt-{Guid.NewGuid():N}";
-    private readonly string rowListId = $"rows-{Guid.NewGuid():N}";
-    private readonly string colListId = $"cols-{Guid.NewGuid():N}";
-
     string GetTypeLabel(string type) => type switch
     {
         "text" => "Short Answer",
@@ -143,56 +144,40 @@
         _ => type
     };
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    void MoveOptionUp(int index)
     {
-        if (firstRender)
-        {
-            objRef = DotNetObjectReference.Create(this);
-        }
-
-        if (Field.FieldType is "radio" or "checkbox" or "dropdown")
-        {
-            await JS.InvokeVoidAsync("initValueSortable", $"#{optionListId}", objRef, nameof(OnOptionReorder));
-        }
-
-        if (Field.FieldType.StartsWith("grid"))
-        {
-            await JS.InvokeVoidAsync("initValueSortable", $"#{rowListId}", objRef, nameof(OnRowReorder));
-            await JS.InvokeVoidAsync("initValueSortable", $"#{colListId}", objRef, nameof(OnColumnReorder));
-        }
+        if (index <= 0) return;
+        (Field.OptionItems[index - 1], Field.OptionItems[index]) = (Field.OptionItems[index], Field.OptionItems[index - 1]);
     }
 
-    [JSInvokable]
-    public void OnOptionReorder(int oldIndex, int newIndex)
+    void MoveOptionDown(int index)
     {
-        if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0 ||
-            oldIndex >= Field.OptionItems.Count || newIndex >= Field.OptionItems.Count) return;
-        var item = Field.OptionItems[oldIndex];
-        Field.OptionItems.RemoveAt(oldIndex);
-        Field.OptionItems.Insert(newIndex, item);
-        StateHasChanged();
+        if (index >= Field.OptionItems.Count - 1) return;
+        (Field.OptionItems[index + 1], Field.OptionItems[index]) = (Field.OptionItems[index], Field.OptionItems[index + 1]);
     }
 
-    [JSInvokable]
-    public void OnRowReorder(int oldIndex, int newIndex)
+    void MoveRowUp(int index)
     {
-        if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0 ||
-            oldIndex >= Field.GridRows.Count || newIndex >= Field.GridRows.Count) return;
-        var item = Field.GridRows[oldIndex];
-        Field.GridRows.RemoveAt(oldIndex);
-        Field.GridRows.Insert(newIndex, item);
-        StateHasChanged();
+        if (index <= 0) return;
+        (Field.GridRows[index - 1], Field.GridRows[index]) = (Field.GridRows[index], Field.GridRows[index - 1]);
     }
 
-    [JSInvokable]
-    public void OnColumnReorder(int oldIndex, int newIndex)
+    void MoveRowDown(int index)
     {
-        if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0 ||
-            oldIndex >= Field.GridColumns.Count || newIndex >= Field.GridColumns.Count) return;
-        var item = Field.GridColumns[oldIndex];
-        Field.GridColumns.RemoveAt(oldIndex);
-        Field.GridColumns.Insert(newIndex, item);
-        StateHasChanged();
+        if (index >= Field.GridRows.Count - 1) return;
+        (Field.GridRows[index + 1], Field.GridRows[index]) = (Field.GridRows[index], Field.GridRows[index + 1]);
+    }
+
+    void MoveColumnUp(int index)
+    {
+        if (index <= 0) return;
+        (Field.GridColumns[index - 1], Field.GridColumns[index]) = (Field.GridColumns[index], Field.GridColumns[index - 1]);
+    }
+
+    void MoveColumnDown(int index)
+    {
+        if (index >= Field.GridColumns.Count - 1) return;
+        (Field.GridColumns[index + 1], Field.GridColumns[index]) = (Field.GridColumns[index], Field.GridColumns[index + 1]);
     }
 
     void SortOptions()
@@ -208,10 +193,5 @@
     void SortColumns()
     {
         Field.GridColumns = Field.GridColumns.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    public void Dispose()
-    {
-        objRef?.Dispose();
     }
 }
