@@ -299,6 +299,7 @@ async Task AddRow(int section)
         }
         sections[section].Rows[row].Fields.Add(CreateField(fieldType));
         await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
+        await JS.InvokeVoidAsync("focusFieldLabel", section, row, sections[section].Rows[row].Fields.Count - 1);
     }
 
     async Task RemoveField(int section, int row, DesignerField field)
@@ -330,6 +331,7 @@ async Task AddRow(int section)
             Label = field.Label,
             FieldType = field.FieldType,
             Placeholder = field.Placeholder,
+            CharLimit = field.CharLimit,
             IsRequired = field.IsRequired,
             OptionItems = new List<string>(field.OptionItems),
             GridColumns = new List<string>(field.GridColumns),
@@ -376,13 +378,21 @@ public async Task AddFieldFromDrop(string fieldType, int sectionIndex, int rowIn
             return;
         }
 
+    int newIndex;
     if (colIndex < 0 || colIndex > list.Count)
+    {
         list.Add(field);
+        newIndex = list.Count - 1;
+    }
     else
+    {
         list.Insert(colIndex, field);
+        newIndex = colIndex;
+    }
 
     StateHasChanged();
     await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
+    await JS.InvokeVoidAsync("focusFieldLabel", sectionIndex, rowIndex, newIndex);
 }
 
 async Task AddSection()
@@ -405,6 +415,7 @@ public async Task AddRowFromDrop(string fieldType, int sectionIndex, int insertI
     sections[sectionIndex].Rows.Insert(insertIndex, row);
     StateHasChanged();
     await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
+    await JS.InvokeVoidAsync("focusFieldLabel", sectionIndex, insertIndex, 0);
 }
 
 [JSInvokable]
@@ -467,11 +478,12 @@ List<object> BuildFieldPayload()
                 {
                     f.Key,
                     f.Label,
-                    f.FieldType,
-                    f.Placeholder,
-                    f.IsRequired,
-                    Row = rowCounter,
-                    Column = c,
+                        f.FieldType,
+                        f.Placeholder,
+                        f.CharLimit,
+                        f.IsRequired,
+                        Row = rowCounter,
+                        Column = c,
                     OptionsJson = JsonSerializer.Serialize(
                         opts.Count > 0 ? opts :
                         rowsList.Count > 0 || colsList.Count > 0 ? new { Rows = rowsList, Columns = colsList } :
@@ -535,6 +547,7 @@ List<object> BuildFieldPayload()
                     Label = f.Label,
                     FieldType = f.FieldType,
                     Placeholder = f.Placeholder ?? string.Empty,
+                    CharLimit = f.CharLimit,
                     IsRequired = f.IsRequired
                 };
                 if (!string.IsNullOrWhiteSpace(f.OptionsJson))

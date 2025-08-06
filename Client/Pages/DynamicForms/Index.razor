@@ -262,6 +262,7 @@ else
         }
         sections[section].Rows[row].Fields.Add(CreateField(fieldType));
         await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
+        await JS.InvokeVoidAsync("focusFieldLabel", section, row, sections[section].Rows[row].Fields.Count - 1);
     }
 
     async Task RemoveField(int section, int row, DesignerField field)
@@ -282,6 +283,7 @@ else
             Label = field.Label,
             FieldType = field.FieldType,
             IsRequired = field.IsRequired,
+            CharLimit = field.CharLimit,
             OptionItems = new List<string>(field.OptionItems),
             GridColumns = new List<string>(field.GridColumns),
             GridRows = new List<string>(field.GridRows),
@@ -328,13 +330,21 @@ else
             return;
         }
 
+        int newIndex;
         if (colIndex < 0 || colIndex > list.Count)
+        {
             list.Add(field);
+            newIndex = list.Count - 1;
+        }
         else
+        {
             list.Insert(colIndex, field);
+            newIndex = colIndex;
+        }
 
         StateHasChanged();
         await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
+        await JS.InvokeVoidAsync("focusFieldLabel", sectionIndex, rowIndex, newIndex);
     }
 
     [JSInvokable]
@@ -350,6 +360,7 @@ else
         sections[sectionIndex].Rows.Insert(insertIndex, row);
         StateHasChanged();
         await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
+        await JS.InvokeVoidAsync("focusFieldLabel", sectionIndex, insertIndex, 0);
     }
 
     [JSInvokable]
@@ -412,6 +423,7 @@ else
                         f.Label,
                         f.FieldType,
                         f.Placeholder,
+                        f.CharLimit,
                         f.IsRequired,
                         Row = rowCounter,
                         Column = c,

@@ -56,11 +56,12 @@ else
                         <input type="text" class="form-control"
                                placeholder="@fld.Placeholder"
                                value="@GetString(fld.Key)"
+                               maxlength="@fld.CharLimit"
                                @onchange="e => OnTextChanged(fld.Key, e)" />
                         break;
 
                     case "textarea":
-                        <textarea class="form-control" placeholder="@fld.Placeholder"
+                        <textarea class="form-control" placeholder="@fld.Placeholder" maxlength="@fld.CharLimit"
                                   @onchange="e => OnTextChanged(fld.Key, e)">@GetString(fld.Key)</textarea>
                         break;
 
@@ -341,6 +342,20 @@ else
     {
         foreach (var fld in form.Fields)
         {
+            if ((fld.FieldType == "text" || fld.FieldType == "textarea") && fld.CharLimit.HasValue)
+            {
+                if (responseData.TryGetValue(fld.Key, out var valObj) && valObj is string s && s.Length > fld.CharLimit.Value)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Character limit",
+                        Detail = $"'{fld.Label}' allows {fld.CharLimit} characters (currently {s.Length})."
+                    });
+                    return;
+                }
+            }
+
             if (!fld.IsRequired)
                 continue;
 

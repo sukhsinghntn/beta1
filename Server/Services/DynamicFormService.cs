@@ -102,6 +102,7 @@ namespace DynamicFormsApp.Server.Services
                     match.Label = fld.Label;
                     match.FieldType = fld.FieldType;
                     match.Placeholder = fld.Placeholder;
+                    match.CharLimit = fld.CharLimit;
                     match.IsRequired = fld.IsRequired;
                     match.OptionsJson = fld.OptionsJson;
                     match.Row = fld.Row;
@@ -117,6 +118,7 @@ namespace DynamicFormsApp.Server.Services
                         Label = fld.Label,
                         FieldType = fld.FieldType,
                         Placeholder = fld.Placeholder,
+                        CharLimit = fld.CharLimit,
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
                         Row = fld.Row,
@@ -168,6 +170,7 @@ namespace DynamicFormsApp.Server.Services
                     Label = fld.Label,
                     FieldType = fld.FieldType,
                     Placeholder = fld.Placeholder,
+                    CharLimit = fld.CharLimit,
                     IsRequired = fld.IsRequired,
                     OptionsJson = fld.OptionsJson,
                     Row = fld.Row,

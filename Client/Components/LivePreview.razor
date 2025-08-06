@@ -31,10 +31,10 @@
                     @switch (field.FieldType)
                     {
                         case "text":
-                            <input class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Short answer")" disabled />
+                            <input class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Short answer")" maxlength="@field.CharLimit" disabled />
                             break;
                         case "textarea":
-                            <textarea class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Paragraph")" disabled></textarea>
+                            <textarea class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Paragraph")" maxlength="@field.CharLimit" disabled></textarea>
                             break;
                         case "radio":
                             @foreach (var opt in field.OptionItems)

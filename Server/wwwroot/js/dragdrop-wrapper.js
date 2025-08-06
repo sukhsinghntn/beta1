@@ -53,3 +53,23 @@ window.initFieldDragDrop = (canvasSelector, dotnetHelper) => {
 
 // Backwards compatibility
 window.initDragDrop = window.initFieldDragDrop;
+
+window.focusFieldLabel = (sectionIndex, rowIndex, fieldIndex) => {
+    requestAnimationFrame(() => {
+        const selector = `#section-${sectionIndex}-rows .designer-row[data-row='${rowIndex}'] [data-id='${fieldIndex}'] input.form-control-sm`;
+        const el = document.querySelector(selector);
+        if (el) {
+            el.focus();
+        }
+    });
+};
+
+window.focusLastInput = (container) => {
+    if (!container) return;
+    requestAnimationFrame(() => {
+        const inputs = container.querySelectorAll('input');
+        if (inputs.length > 0) {
+            inputs[inputs.length - 1].focus();
+        }
+    });
+};

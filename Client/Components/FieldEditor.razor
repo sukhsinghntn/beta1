@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using DynamicFormsApp.Shared
+@inject IJSRuntime JS
 
 <div class="card mb-3 shadow-sm field-card" @attributes="AdditionalAttributes">
     <div class="card-body">
@@ -26,12 +27,16 @@
                 <input class="form-control" @bind="Field.Placeholder" placeholder="e.g., Enter your answer" />
                 <div class="form-text">Shown inside the field until the user enters a value.</div>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Character Limit</label>
+                <input type="number" class="form-control" @bind="Field.CharLimit" min="1" />
+            </div>
         }
 
         @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
         {
             <label class="form-label mt-3">Options</label>
-            <div>
+            <div @ref="optionsRef">
                 @foreach (var (opt, index) in Field.OptionItems.Select((val, idx) => (val, idx)))
                 {
                     <div class="d-flex align-items-center mb-1">
@@ -45,7 +50,7 @@
                 }
             </div>
             <div class="d-flex gap-2 mt-1">
-                <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.OptionItems.Add(string.Empty)">+ Add Option</button>
+                <button class="btn btn-sm btn-outline-primary" @onclick="AddOption">+ Add Option</button>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="SortOptions">Sort A-Z</button>
             </div>
         }
@@ -125,6 +130,8 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
 
+    ElementReference optionsRef;
+
     string GetTypeLabel(string type) => type switch
     {
         "text" => "Short Answer",
@@ -193,5 +200,12 @@
     void SortColumns()
     {
         Field.GridColumns = Field.GridColumns.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    async Task AddOption()
+    {
+        Field.OptionItems.Add(string.Empty);
+        await InvokeAsync(StateHasChanged);
+        await JS.InvokeVoidAsync("focusLastInput", optionsRef);
     }
 }
