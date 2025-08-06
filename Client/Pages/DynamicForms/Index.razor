@@ -240,6 +240,13 @@ else
         await JS.InvokeVoidAsync("initSortable", $"#section-{sections.Count - 1}-rows", objRef!);
     }
 
+    DesignerField CreateField(string fieldType) => new DesignerField
+    {
+        FieldType = fieldType,
+        Placeholder = fieldType == "text" ? "Short answer" :
+                      fieldType == "textarea" ? "Paragraph" : string.Empty
+    };
+
     async Task AddField(int section, int row, string fieldType = "text")
     {
         if (sections[section].Rows[row].Fields.Count >= 4)
@@ -252,7 +259,7 @@ else
             });
             return;
         }
-        sections[section].Rows[row].Fields.Add(new DesignerField { FieldType = fieldType });
+        sections[section].Rows[row].Fields.Add(CreateField(fieldType));
         await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
@@ -278,7 +285,8 @@ else
             GridColumns = new List<string>(field.GridColumns),
             GridRows = new List<string>(field.GridRows),
             ScaleMin = field.ScaleMin,
-            ScaleMax = field.ScaleMax
+            ScaleMax = field.ScaleMax,
+            Placeholder = field.Placeholder
         };
         var list = sections[section].Rows[row].Fields;
         if (list.Count >= 4)
@@ -305,7 +313,7 @@ else
             rowIndex = sections[sectionIndex].Rows.Count - 1;
 
         var list = sections[sectionIndex].Rows[rowIndex].Fields;
-        var field = new DesignerField { FieldType = fieldType };
+        var field = CreateField(fieldType);
 
         if (list.Count >= 4)
         {
@@ -337,7 +345,7 @@ else
             insertIndex = sections[sectionIndex].Rows.Count;
 
         var row = new DesignerRow();
-        row.Fields.Add(new DesignerField { FieldType = fieldType });
+        row.Fields.Add(CreateField(fieldType));
         sections[sectionIndex].Rows.Insert(insertIndex, row);
         StateHasChanged();
         await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
@@ -399,6 +407,7 @@ else
                     {
                         f.Label,
                         f.FieldType,
+                        f.Placeholder,
                         f.IsRequired,
                         Row = rowCounter,
                         Column = c,

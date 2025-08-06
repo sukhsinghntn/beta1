@@ -8,6 +8,7 @@
             <div class="d-flex align-items-center gap-2">
                 <span class="drag-handle text-muted"><span class="material-icons fs-4">drag_indicator</span></span>
                 <input class="form-control form-control-sm" placeholder="Field label" @bind="Field.Label" />
+                <span class="badge bg-secondary">@GetTypeLabel(Field.FieldType)</span>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => OnDuplicate.InvokeAsync(Field)">
@@ -21,7 +22,7 @@
 
         <div class="row g-2">
             <div class="col-md-4">
-                <select class="form-select" @bind="Field.FieldType">
+                <select class="form-select" @bind="Field.FieldType" @bind:after="OnTypeChanged">
                     <option value="text">Short Answer</option>
                     <option value="textarea">Paragraph</option>
                     <option value="radio">Multiple Choice</option>
@@ -38,6 +39,12 @@
                     <option value="file">Upload File</option>
                 </select>
             </div>
+            @if (Field.FieldType is "text" or "textarea")
+            {
+                <div class="col-md-8">
+                    <input class="form-control" placeholder="Placeholder" @bind="Field.Placeholder" />
+                </div>
+            }
         </div>
 
         @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
@@ -116,4 +123,41 @@
     [Parameter] public EventCallback<DesignerField> OnDuplicate { get; set; }
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
+
+    string GetTypeLabel(string type) => type switch
+    {
+        "text" => "Short Answer",
+        "textarea" => "Paragraph",
+        "radio" => "Multiple Choice",
+        "checkbox" => "Checkbox",
+        "dropdown" => "Dropdown",
+        "date" => "Date",
+        "time" => "Time",
+        "datetime" => "Date Time",
+        "scale" => "Linear Scale",
+        "grid_radio" => "Choice Grid",
+        "grid_checkbox" => "Checkbox Grid",
+        "title" => "Title",
+        "section" => "Section",
+        "file" => "Upload File",
+        _ => type
+    };
+
+    void OnTypeChanged()
+    {
+        if (Field.FieldType == "text")
+        {
+            if (string.IsNullOrWhiteSpace(Field.Placeholder))
+                Field.Placeholder = "Short answer";
+        }
+        else if (Field.FieldType == "textarea")
+        {
+            if (string.IsNullOrWhiteSpace(Field.Placeholder))
+                Field.Placeholder = "Paragraph";
+        }
+        else
+        {
+            Field.Placeholder = string.Empty;
+        }
+    }
 }

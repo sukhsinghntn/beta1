@@ -101,6 +101,7 @@ namespace DynamicFormsApp.Server.Services
                 {
                     match.Label = fld.Label;
                     match.FieldType = fld.FieldType;
+                    match.Placeholder = fld.Placeholder;
                     match.IsRequired = fld.IsRequired;
                     match.OptionsJson = fld.OptionsJson;
                     match.Row = fld.Row;
@@ -115,6 +116,7 @@ namespace DynamicFormsApp.Server.Services
                         Key = key,
                         Label = fld.Label,
                         FieldType = fld.FieldType,
+                        Placeholder = fld.Placeholder,
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
                         Row = fld.Row,
@@ -165,6 +167,7 @@ namespace DynamicFormsApp.Server.Services
                     Key = GetUniqueKey(keySource, keySet),
                     Label = fld.Label,
                     FieldType = fld.FieldType,
+                    Placeholder = fld.Placeholder,
                     IsRequired = fld.IsRequired,
                     OptionsJson = fld.OptionsJson,
                     Row = fld.Row,

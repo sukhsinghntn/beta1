@@ -54,12 +54,13 @@ else
                 {
                     case "text":
                         <input type="text" class="form-control"
+                               placeholder="@fld.Placeholder"
                                value="@GetString(fld.Key)"
                                @onchange="e => OnTextChanged(fld.Key, e)" />
                         break;
 
                     case "textarea":
-                        <textarea class="form-control"
+                        <textarea class="form-control" placeholder="@fld.Placeholder"
                                   @onchange="e => OnTextChanged(fld.Key, e)">@GetString(fld.Key)</textarea>
                         break;
 

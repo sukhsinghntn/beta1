@@ -277,6 +277,13 @@ async Task AddRow(int section)
         await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
+    DesignerField CreateField(string fieldType) => new DesignerField
+    {
+        FieldType = fieldType,
+        Placeholder = fieldType == "text" ? "Short answer" :
+                      fieldType == "textarea" ? "Paragraph" : string.Empty
+    };
+
     async Task AddField(int section, int row, string fieldType = "text")
     {
         if (sections[section].Rows[row].Fields.Count >= 4)
@@ -289,7 +296,7 @@ async Task AddRow(int section)
             });
             return;
         }
-        sections[section].Rows[row].Fields.Add(new DesignerField { FieldType = fieldType });
+        sections[section].Rows[row].Fields.Add(CreateField(fieldType));
         await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
@@ -321,6 +328,7 @@ async Task AddRow(int section)
             Key = string.Empty,
             Label = field.Label,
             FieldType = field.FieldType,
+            Placeholder = field.Placeholder,
             IsRequired = field.IsRequired,
             OptionItems = new List<string>(field.OptionItems),
             GridColumns = new List<string>(field.GridColumns),
@@ -353,7 +361,7 @@ public async Task AddFieldFromDrop(string fieldType, int sectionIndex, int rowIn
         rowIndex = sections[sectionIndex].Rows.Count - 1;
 
     var list = sections[sectionIndex].Rows[rowIndex].Fields;
-    var field = new DesignerField { FieldType = fieldType };
+    var field = CreateField(fieldType);
 
         if (list.Count >= 4)
         {
@@ -392,7 +400,7 @@ public async Task AddRowFromDrop(string fieldType, int sectionIndex, int insertI
         insertIndex = sections[sectionIndex].Rows.Count;
 
     var row = new DesignerRow();
-    row.Fields.Add(new DesignerField { FieldType = fieldType });
+    row.Fields.Add(CreateField(fieldType));
     sections[sectionIndex].Rows.Insert(insertIndex, row);
     StateHasChanged();
     await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
@@ -456,6 +464,7 @@ List<object> BuildFieldPayload()
                     f.Key,
                     f.Label,
                     f.FieldType,
+                    f.Placeholder,
                     f.IsRequired,
                     Row = rowCounter,
                     Column = c,
@@ -521,6 +530,7 @@ List<object> BuildFieldPayload()
                     Key = f.Key,
                     Label = f.Label,
                     FieldType = f.FieldType,
+                    Placeholder = f.Placeholder ?? string.Empty,
                     IsRequired = f.IsRequired
                 };
                 if (!string.IsNullOrWhiteSpace(f.OptionsJson))
