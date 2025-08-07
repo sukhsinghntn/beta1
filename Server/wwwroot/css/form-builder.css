@@ -79,19 +79,8 @@
     padding: 0 4px;
 }
 
-/* Preview toggle */
-.preview-toggle {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 1050;
-}
-
 .section-filter-select {
     min-width: 120px;
-}
-.section-filters .form-check {
-    margin-bottom: 0;
 }
 
 /* Dark mode overrides */
