@@ -81,42 +81,48 @@
                     var secIndex = s;
                     <div class="section-wrapper mb-4" data-section="@secIndex" id="section-@secIndex" @key="sections[secIndex]">
                         <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="card-header">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="material-icons section-drag-handle">drag_indicator</span>
                                     <input class="form-control form-control-sm" placeholder="Section title" @bind="sections[secIndex].Title" />
-                                </div>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleCollapse(secIndex)">
-                                        <span class="material-icons">@(!sections[secIndex].IsCollapsed ? "expand_less" : "expand_more")</span>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSection(secIndex)">
-                                        <span class="material-icons">delete</span>
-                                    </button>
+                                    <div class="ms-auto d-flex align-items-center gap-2 section-filters">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" @bind="sections[secIndex].UseDepartmentFilter" @bind:after="() => ToggleDeptFilter(secIndex)" />
+                                            <label class="form-check-label small">Department</label>
+                                        </div>
+                                        @if (sections[secIndex].UseDepartmentFilter)
+                                        {
+                                            <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
+                                                @foreach (var d in deptOptions)
+                                                {
+                                                    <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
+                                                }
+                                            </select>
+                                        }
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" @bind="sections[secIndex].UseLocationFilter" @bind:after="() => ToggleLocFilter(secIndex)" />
+                                            <label class="form-check-label small">Location</label>
+                                        </div>
+                                        @if (sections[secIndex].UseLocationFilter)
+                                        {
+                                            <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnLocationsChanged(secIndex, e)">
+                                                @foreach (var l in locOptions)
+                                                {
+                                                    <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
+                                                }
+                                            </select>
+                                        }
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleCollapse(secIndex)">
+                                            <span class="material-icons">@(!sections[secIndex].IsCollapsed ? "expand_less" : "expand_more")</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSection(secIndex)">
+                                            <span class="material-icons">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="card-body" hidden="@sections[secIndex].IsCollapsed">
                                 <textarea class="form-control mb-3" placeholder="Section instructions" @bind="sections[secIndex].Instructions"></textarea>
-                                <div class="row g-2 mb-3">
-                                    <div class="col">
-                                        <label class="form-label">Visible to Departments</label>
-                    <select multiple class="form-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
-                        @foreach (var d in deptOptions)
-                        {
-                            <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
-                        }
-                    </select>
-                                    </div>
-                                    <div class="col">
-                                        <label class="form-label">Visible to Locations</label>
-                    <select multiple class="form-select" @onchange="e => OnLocationsChanged(secIndex, e)">
-                        @foreach (var l in locOptions)
-                        {
-                            <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
-                        }
-                    </select>
-                                    </div>
-                                </div>
                                 <div id="section-@secIndex-rows">
                                     @for (int r = 0; r < sections[secIndex].Rows.Count; r++)
                                     {
@@ -249,6 +255,24 @@ else
     {
         sections[secIndex].Locations = ExtractSelected(e);
         OnSectionRestrictionChanged();
+    }
+
+    void ToggleDeptFilter(int secIndex)
+    {
+        if (!sections[secIndex].UseDepartmentFilter)
+        {
+            sections[secIndex].Departments.Clear();
+            OnSectionRestrictionChanged();
+        }
+    }
+
+    void ToggleLocFilter(int secIndex)
+    {
+        if (!sections[secIndex].UseLocationFilter)
+        {
+            sections[secIndex].Locations.Clear();
+            OnSectionRestrictionChanged();
+        }
     }
 
     static List<string> ExtractSelected(ChangeEventArgs e)
