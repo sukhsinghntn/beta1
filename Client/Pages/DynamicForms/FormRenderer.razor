@@ -94,7 +94,7 @@ else
                     case "dropdown":
                         var ddOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]");
                         <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
-                            <option value="" disabled selected>Select...</option>
+                            <option value="" disabled selected>@(string.IsNullOrWhiteSpace(fld.Placeholder) ? "Select one from dropdown" : fld.Placeholder)</option>
                             @foreach (var opt in ddOptions)
                             {
                                 <option value="@opt">@opt</option>

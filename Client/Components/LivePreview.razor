@@ -56,6 +56,7 @@
                             break;
                         case "dropdown":
                             <select class="form-select" disabled>
+                                <option>@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Select one from dropdown")</option>
                                 @foreach (var opt in field.OptionItems)
                                 {
                                     <option>@opt</option>

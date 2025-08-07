@@ -86,44 +86,31 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                     <div class="section-wrapper mb-4" data-section="@secIndex" id="section-@secIndex" @key="sections[secIndex]">
                         <div class="card">
                             <div class="card-header">
-                                <div class="d-flex align-items-start gap-2">
+                                <div class="d-flex align-items-center gap-2">
                                     <span class="material-icons section-drag-handle">drag_indicator</span>
                                     <input class="form-control form-control-sm" placeholder="Section title" @bind="sections[secIndex].Title" />
-                                    <div class="ms-auto section-filters text-end">
-                                        <div class="small text-muted">Make this section only visible to:</div>
-                    <div class="d-flex flex-column gap-1 mt-1">
-                        <div class="d-flex justify-content-end align-items-center gap-1">
-                            <div class="form-check m-0">
-                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseDepartmentFilter" @onchange="e => ToggleDepartmentFilter(secIndex, e)" id="edit-sec-@secIndex-dep" />
-                                <label class="form-check-label" for="edit-sec-@secIndex-dep">Department</label>
-                            </div>
-                            @if (sections[secIndex].UseDepartmentFilter)
-                            {
-                                <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
-                                    @foreach (var d in deptOptions)
-                                    {
-                                        <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
-                                    }
-                                </select>
-                            }
-                        </div>
-                        <div class="d-flex justify-content-end align-items-center gap-1">
-                            <div class="form-check m-0">
-                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseLocationFilter" @onchange="e => ToggleLocationFilter(secIndex, e)" id="edit-sec-@secIndex-loc" />
-                                <label class="form-check-label" for="edit-sec-@secIndex-loc">Location</label>
-                            </div>
-                            @if (sections[secIndex].UseLocationFilter)
-                            {
-                                <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnLocationsChanged(secIndex, e)">
-                                    @foreach (var l in locOptions)
-                                    {
-                                        <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
-                                    }
-                                </select>
-                            }
-                        </div>
-                    </div>
-                                        <div class="mt-1 d-flex justify-content-end gap-1">
+                                    <div class="ms-auto d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseDepartmentFilter" @onchange="e => ToggleDepartmentFilter(secIndex, e)" id="edit-sec-@secIndex-dep" />
+                                                <label class="form-check-label" for="edit-sec-@secIndex-dep">Department</label>
+                                            </div>
+                                            @if (sections[secIndex].UseDepartmentFilter)
+                                            {
+                                                <RadzenDropDown Data="@deptOptions" Multiple="true" CheckBoxes="true" Style="min-width:120px" Value="@sections[secIndex].Departments" ValueChanged="@((IEnumerable<string> values) => OnDepartmentsChanged(secIndex, values))" class="section-filter-select" />
+                                            }
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseLocationFilter" @onchange="e => ToggleLocationFilter(secIndex, e)" id="edit-sec-@secIndex-loc" />
+                                                <label class="form-check-label" for="edit-sec-@secIndex-loc">Location</label>
+                                            </div>
+                                            @if (sections[secIndex].UseLocationFilter)
+                                            {
+                                                <RadzenDropDown Data="@locOptions" Multiple="true" CheckBoxes="true" Style="min-width:120px" Value="@sections[secIndex].Locations" ValueChanged="@((IEnumerable<string> values) => OnLocationsChanged(secIndex, values))" class="section-filter-select" />
+                                            }
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
                                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleCollapse(secIndex)">
                                                 <span class="material-icons">@(!sections[secIndex].IsCollapsed ? "expand_less" : "expand_more")</span>
                                             </button>
@@ -306,15 +293,15 @@ else
         }
     }
 
-    void OnDepartmentsChanged(int secIndex, ChangeEventArgs e)
+    void OnDepartmentsChanged(int secIndex, IEnumerable<string> values)
     {
-        sections[secIndex].Departments = ExtractSelected(e);
+        sections[secIndex].Departments = values.ToList();
         OnSectionRestrictionChanged();
     }
 
-    void OnLocationsChanged(int secIndex, ChangeEventArgs e)
+    void OnLocationsChanged(int secIndex, IEnumerable<string> values)
     {
-        sections[secIndex].Locations = ExtractSelected(e);
+        sections[secIndex].Locations = values.ToList();
         OnSectionRestrictionChanged();
     }
 
@@ -334,17 +321,6 @@ else
         OnSectionRestrictionChanged();
     }
 
-    static List<string> ExtractSelected(ChangeEventArgs e)
-    {
-        return e.Value switch
-        {
-            string s => string.IsNullOrWhiteSpace(s) ? new List<string>() : new List<string> { s },
-            string[] arr => arr.ToList(),
-            IEnumerable<string> strs => strs.Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
-            IEnumerable<object> objs => objs.Select(o => o?.ToString() ?? string.Empty).Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
-            _ => new List<string>()
-        };
-    }
 
 [JSInvokable]
 public void OnSortUpdate(int fromSection, int fromRow, int oldIndex, int toSection, int toRow, int newIndex)
@@ -414,7 +390,8 @@ async Task AddRow(int section)
             _ => string.Empty
         },
         Placeholder = fieldType == "text" ? "Short answer" :
-                      fieldType == "textarea" ? "Paragraph" : string.Empty
+                      fieldType == "textarea" ? "Paragraph" :
+                      fieldType == "dropdown" ? "Select one from dropdown" : string.Empty
     };
 
     async Task AddField(int section, int row, string fieldType = "text")
