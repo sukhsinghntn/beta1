@@ -101,6 +101,9 @@ namespace DynamicFormsApp.Server.Services
                 {
                     match.Label = fld.Label;
                     match.FieldType = fld.FieldType;
+                    match.Placeholder = fld.Placeholder;
+                    match.CharLimit = fld.CharLimit;
+                    match.MinCharLimit = fld.MinCharLimit;
                     match.IsRequired = fld.IsRequired;
                     match.OptionsJson = fld.OptionsJson;
                     match.Row = fld.Row;
@@ -115,6 +118,9 @@ namespace DynamicFormsApp.Server.Services
                         Key = key,
                         Label = fld.Label,
                         FieldType = fld.FieldType,
+                        Placeholder = fld.Placeholder,
+                        CharLimit = fld.CharLimit,
+                        MinCharLimit = fld.MinCharLimit,
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
                         Row = fld.Row,
@@ -124,11 +130,14 @@ namespace DynamicFormsApp.Server.Services
 
                     var rawName = SanitizeKey(existing.Name);
                     var tableName = $"Form_{existing.Id}_{rawName}";
-                    var sqlType = MapToSqlType(newField.FieldType);
-                    // Existing response rows may prevent adding a NOT NULL column.
-                    // Always allow nulls for new columns to avoid migration issues.
-                    var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
-                    await _db.Database.ExecuteSqlRawAsync(sql);
+                    if (newField.FieldType != "section" && newField.FieldType != "title")
+                    {
+                        var sqlType = MapToSqlType(newField.FieldType);
+                        // Existing response rows may prevent adding a NOT NULL column.
+                        // Always allow nulls for new columns to avoid migration issues.
+                        var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
+                        await _db.Database.ExecuteSqlRawAsync(sql);
+                    }
                 }
             }
 
@@ -162,6 +171,9 @@ namespace DynamicFormsApp.Server.Services
                     Key = GetUniqueKey(keySource, keySet),
                     Label = fld.Label,
                     FieldType = fld.FieldType,
+                    Placeholder = fld.Placeholder,
+                    CharLimit = fld.CharLimit,
+                    MinCharLimit = fld.MinCharLimit,
                     IsRequired = fld.IsRequired,
                     OptionsJson = fld.OptionsJson,
                     Row = fld.Row,
@@ -184,6 +196,8 @@ namespace DynamicFormsApp.Server.Services
 
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title")
+                    continue;
                 sb.Append($", [{fld.Key}] {MapToSqlType(fld.FieldType)} {(fld.IsRequired ? "NOT NULL" : "NULL")}");
             }
             sb.Append(");");
@@ -212,21 +226,22 @@ namespace DynamicFormsApp.Server.Services
             var rawName = SanitizeKey(form.Name);
             var tableName = $"Form_{formId}_{rawName}";
 
-            var cols = string.Join(", ", values.Keys.Select(k => $"[{k}]")) + ", CreatedAt";
-            var paramNames = string.Join(", ",
-                values.Keys.Select((k, i) => $"@p{i}")
-                           .Concat(new[] { "@p_created" }));
-            if (form.RequireLogin)
-            {
-                cols += ", ResponderName";
-                paramNames += ", @p_responder";
-            }
+            var validFields = form.Fields
+                .Where(f => f.FieldType != "section" && f.FieldType != "title")
+                .Select(f => f.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
+            var filtered = values
+                .Where(kv => validFields.Contains(kv.Key))
+                .ToDictionary(k => k.Key, v => v.Value);
+
+            var cols = string.Join(", ", filtered.Keys.Select(k => $"[{k}]"));
+            var paramNames = string.Join(", ",
+                filtered.Keys.Select((k, i) => $"@p{i}"));
 
             var sqlParams = new List<SqlParameter>();
             int idx = 0;
-            foreach (var kv in values)
+            foreach (var kv in filtered)
             {
                 object raw = kv.Value;
                 if (raw is JsonElement je)
@@ -254,11 +269,18 @@ namespace DynamicFormsApp.Server.Services
                 idx++;
             }
 
+            cols = string.IsNullOrEmpty(cols) ? "CreatedAt" : cols + ", CreatedAt";
+            paramNames = string.IsNullOrEmpty(paramNames) ? "@p_created" : paramNames + ", @p_created";
             sqlParams.Add(new SqlParameter("@p_created", DateTime.UtcNow));
+
             if (form.RequireLogin)
             {
+                cols += ", ResponderName";
+                paramNames += ", @p_responder";
                 sqlParams.Add(new SqlParameter("@p_responder", (object?)responderName ?? DBNull.Value));
             }
+
+            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
             await _db.Database.ExecuteSqlRawAsync(sql, sqlParams.ToArray());
 
             return form;
@@ -603,6 +625,9 @@ namespace DynamicFormsApp.Server.Services
             "file" => "NVARCHAR(MAX)",
             "checkbox" => "NVARCHAR(MAX)",      // Store as JSON array
             "dropdown" => "NVARCHAR(255)",
+            "user" => "NVARCHAR(255)",
+            "department" => "NVARCHAR(255)",
+            "location" => "NVARCHAR(255)",
             "radio" => "NVARCHAR(255)",
             "textarea" => "NVARCHAR(MAX)",
             "grid_radio" => "NVARCHAR(MAX)",    // JSON object

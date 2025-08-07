@@ -1,13 +1,14 @@
 ﻿@using Microsoft.AspNetCore.Components
 @using DynamicFormsApp.Shared
+@inject IJSRuntime JS
 
 <div class="card mb-3 shadow-sm field-card" @attributes="AdditionalAttributes">
     <div class="card-body">
-
         <div class="d-flex justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
                 <span class="drag-handle text-muted"><span class="material-icons fs-4">drag_indicator</span></span>
                 <input class="form-control form-control-sm" placeholder="Field label" @bind="Field.Label" />
+                <span class="badge bg-secondary">@GetTypeLabel(Field.FieldType)</span>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => OnDuplicate.InvokeAsync(Field)">
@@ -19,70 +20,85 @@
             </div>
         </div>
 
-        <div class="row g-2">
-            <div class="col-md-4">
-                <select class="form-select" @bind="Field.FieldType">
-                    <option value="text">Short Answer</option>
-                    <option value="textarea">Paragraph</option>
-                    <option value="radio">Multiple Choice</option>
-                    <option value="checkbox">Checkbox</option>
-                    <option value="dropdown">Dropdown</option>
-                    <option value="date">Date</option>
-                    <option value="time">Time</option>
-                    <option value="datetime">Date Time</option>
-                    <option value="scale">Linear Scale</option>
-                    <option value="grid_radio">Multiple Choice Grid</option>
-                    <option value="grid_checkbox">Checkbox Grid</option>
-                    <option value="title">Title</option>
-                    <option value="section">Section</option>
-                    <option value="file">Upload File</option>
-                </select>
+        @if (Field.FieldType is "text" or "textarea")
+        {
+            <div class="mb-3">
+                <label class="form-label">Placeholder Text</label>
+                <input class="form-control" @bind="Field.Placeholder" placeholder="e.g., Enter your answer" />
+                <div class="form-text">Shown inside the field until the user enters a value.</div>
             </div>
-        </div>
+            <div class="mb-3">
+                <label class="form-label">Character Limits</label>
+                <div class="d-flex gap-2">
+                    <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.MinCharLimit" min="0" placeholder="Min" />
+                    <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.CharLimit" min="1" placeholder="Max" />
+                </div>
+            </div>
+        }
 
         @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
         {
             <label class="form-label mt-3">Options</label>
-            @foreach (var (opt, index) in Field.OptionItems.Select((val, idx) => (val, idx)))
-            {
-                <div class="input-group mb-1">
-                    <input class="form-control" value="@opt" @onchange="e => Field.OptionItems[index] = e.Value?.ToString() ?? string.Empty" />
-                    <button class="btn btn-outline-danger" @onclick="() => Field.OptionItems.RemoveAt(index)">×</button>
-                </div>
-            }
-
-            <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.OptionItems.Add(string.Empty)">
-                + Add Option
-            </button>
+            <div @ref="optionsRef">
+                @foreach (var (opt, index) in Field.OptionItems.Select((val, idx) => (val, idx)))
+                {
+                    <div class="d-flex align-items-center mb-1">
+                        <input class="form-control flex-grow-1" @bind="Field.OptionItems[index]" />
+                        <div class="btn-group btn-group-sm ms-1">
+                            <button class="btn btn-outline-secondary" @onclick="() => MoveOptionUp(index)"><span class="material-icons">arrow_upward</span></button>
+                            <button class="btn btn-outline-secondary" @onclick="() => MoveOptionDown(index)"><span class="material-icons">arrow_downward</span></button>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.OptionItems.RemoveAt(index)">×</button>
+                    </div>
+                }
+            </div>
+            <div class="d-flex gap-2 mt-1">
+                <button class="btn btn-sm btn-outline-primary" @onclick="AddOption">+ Add Option</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="SortOptions">Sort A-Z</button>
+            </div>
         }
         else if (Field.FieldType.StartsWith("grid"))
         {
             <div class="row mt-3">
                 <div class="col-md-6">
                     <label class="form-label">Grid Rows</label>
-                    @foreach (var (row, idx) in Field.GridRows.Select((r, i) => (r, i)))
-                    {
-                        <div class="input-group mb-1">
-                            <input class="form-control" @bind="Field.GridRows[idx]" />
-                            <button class="btn btn-outline-danger" @onclick="() => Field.GridRows.RemoveAt(idx)">×</button>
-                        </div>
-                    }
-                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.GridRows.Add(string.Empty)">
-                        + Add Row
-                    </button>
+                    <div>
+                        @foreach (var (row, idx) in Field.GridRows.Select((r, i) => (r, i)))
+                        {
+                            <div class="d-flex align-items-center mb-1">
+                                <input class="form-control flex-grow-1" @bind="Field.GridRows[idx]" />
+                                <div class="btn-group btn-group-sm ms-1">
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveRowUp(idx)"><span class="material-icons">arrow_upward</span></button>
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveRowDown(idx)"><span class="material-icons">arrow_downward</span></button>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.GridRows.RemoveAt(idx)">×</button>
+                            </div>
+                        }
+                    </div>
+                    <div class="d-flex gap-2 mt-1">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.GridRows.Add(string.Empty)">+ Add Row</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="SortRows">Sort A-Z</button>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Grid Columns</label>
-                    @foreach (var (col, idx) in Field.GridColumns.Select((c, i) => (c, i)))
-                    {
-                        <div class="input-group mb-1">
-                            <input class="form-control" @bind="Field.GridColumns[idx]" />
-                            <button class="btn btn-outline-danger" @onclick="() => Field.GridColumns.RemoveAt(idx)">×</button>
-                        </div>
-                    }
-                    <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.GridColumns.Add(string.Empty)">
-                        + Add Column
-                    </button>
+                    <div>
+                        @foreach (var (col, idx) in Field.GridColumns.Select((c, i) => (c, i)))
+                        {
+                            <div class="d-flex align-items-center mb-1">
+                                <input class="form-control flex-grow-1" @bind="Field.GridColumns[idx]" />
+                                <div class="btn-group btn-group-sm ms-1">
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveColumnUp(idx)"><span class="material-icons">arrow_upward</span></button>
+                                    <button class="btn btn-outline-secondary" @onclick="() => MoveColumnDown(idx)"><span class="material-icons">arrow_downward</span></button>
+                                </div>
+                                <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => Field.GridColumns.RemoveAt(idx)">×</button>
+                            </div>
+                        }
+                    </div>
+                    <div class="d-flex gap-2 mt-1">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => Field.GridColumns.Add(string.Empty)">+ Add Column</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="SortColumns">Sort A-Z</button>
+                    </div>
                 </div>
             </div>
         }
@@ -116,4 +132,86 @@
     [Parameter] public EventCallback<DesignerField> OnDuplicate { get; set; }
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> AdditionalAttributes { get; set; } = new();
+
+    ElementReference optionsRef;
+
+    string GetTypeLabel(string type) => type switch
+    {
+        "text" => "Short Answer",
+        "textarea" => "Paragraph",
+        "radio" => "Multiple Choice",
+        "checkbox" => "Checkbox",
+        "dropdown" => "Dropdown",
+        "user" => "User Dropdown",
+        "department" => "Department Dropdown",
+        "location" => "Location Dropdown",
+        "date" => "Date",
+        "time" => "Time",
+        "datetime" => "Date Time",
+        "scale" => "Linear Scale",
+        "grid_radio" => "Choice Grid",
+        "grid_checkbox" => "Checkbox Grid",
+        "title" => "Title",
+        "section" => "Section",
+        "file" => "Upload File",
+        _ => type
+    };
+
+    void MoveOptionUp(int index)
+    {
+        if (index <= 0) return;
+        (Field.OptionItems[index - 1], Field.OptionItems[index]) = (Field.OptionItems[index], Field.OptionItems[index - 1]);
+    }
+
+    void MoveOptionDown(int index)
+    {
+        if (index >= Field.OptionItems.Count - 1) return;
+        (Field.OptionItems[index + 1], Field.OptionItems[index]) = (Field.OptionItems[index], Field.OptionItems[index + 1]);
+    }
+
+    void MoveRowUp(int index)
+    {
+        if (index <= 0) return;
+        (Field.GridRows[index - 1], Field.GridRows[index]) = (Field.GridRows[index], Field.GridRows[index - 1]);
+    }
+
+    void MoveRowDown(int index)
+    {
+        if (index >= Field.GridRows.Count - 1) return;
+        (Field.GridRows[index + 1], Field.GridRows[index]) = (Field.GridRows[index], Field.GridRows[index + 1]);
+    }
+
+    void MoveColumnUp(int index)
+    {
+        if (index <= 0) return;
+        (Field.GridColumns[index - 1], Field.GridColumns[index]) = (Field.GridColumns[index], Field.GridColumns[index - 1]);
+    }
+
+    void MoveColumnDown(int index)
+    {
+        if (index >= Field.GridColumns.Count - 1) return;
+        (Field.GridColumns[index + 1], Field.GridColumns[index]) = (Field.GridColumns[index], Field.GridColumns[index + 1]);
+    }
+
+    void SortOptions()
+    {
+        Field.OptionItems = Field.OptionItems.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    void SortRows()
+    {
+        Field.GridRows = Field.GridRows.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    void SortColumns()
+    {
+        Field.GridColumns = Field.GridColumns.OrderBy(o => o, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    async Task AddOption()
+    {
+        Field.OptionItems.Add(string.Empty);
+        await InvokeAsync(StateHasChanged);
+        await JS.InvokeVoidAsync("focusLastInput", optionsRef);
+    }
 }
