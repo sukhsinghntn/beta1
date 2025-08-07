@@ -1,6 +1,7 @@
 ﻿using DynamicFormsApp.Shared.Models;
 using DynamicFormsApp.Shared.Services;
 using System.Net.Http.Json;
+using System.Linq;
 
 namespace DynamicFormsApp.Client.Services
 {
@@ -33,6 +34,17 @@ namespace DynamicFormsApp.Client.Services
         {
             var encoded = System.Net.WebUtility.UrlEncode(term);
             return await _httpClient.GetFromJsonAsync<List<UserModel>>($"api/user/search?term={encoded}");
+        }
+
+        public async Task<List<string>> GetDepartments()
+        {
+            return await _httpClient.GetFromJsonAsync<List<string>>("api/user/departments");
+        }
+
+        public async Task<List<string>> GetLocations()
+        {
+            var list = await _httpClient.GetFromJsonAsync<List<string>>("api/user/locations");
+            return list.Where(l => !l.Contains("1511", StringComparison.OrdinalIgnoreCase) && !l.Contains("japan", StringComparison.OrdinalIgnoreCase)).ToList();
         }
     }
 }
