@@ -100,21 +100,21 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col">
                                         <label class="form-label">Visible to Departments</label>
-                                        <select multiple class="form-select" @bind="sections[secIndex].Departments" @bind:after="OnSectionRestrictionChanged">
-                                            @foreach (var d in deptOptions)
-                                            {
-                                                <option value="@d">@d</option>
-                                            }
-                                        </select>
+                    <select multiple class="form-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
+                        @foreach (var d in deptOptions)
+                        {
+                            <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
+                        }
+                    </select>
                                     </div>
                                     <div class="col">
                                         <label class="form-label">Visible to Locations</label>
-                                        <select multiple class="form-select" @bind="sections[secIndex].Locations" @bind:after="OnSectionRestrictionChanged">
-                                            @foreach (var l in locOptions)
-                                            {
-                                                <option value="@l">@l</option>
-                                            }
-                                        </select>
+                    <select multiple class="form-select" @onchange="e => OnLocationsChanged(secIndex, e)">
+                        @foreach (var l in locOptions)
+                        {
+                            <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
+                        }
+                    </select>
                                     </div>
                                 </div>
                                 <div id="section-@secIndex-rows">
@@ -237,6 +237,30 @@ else
         {
             restrictionAlertShown = false;
         }
+    }
+
+    void OnDepartmentsChanged(int secIndex, ChangeEventArgs e)
+    {
+        sections[secIndex].Departments = ExtractSelected(e);
+        OnSectionRestrictionChanged();
+    }
+
+    void OnLocationsChanged(int secIndex, ChangeEventArgs e)
+    {
+        sections[secIndex].Locations = ExtractSelected(e);
+        OnSectionRestrictionChanged();
+    }
+
+    static List<string> ExtractSelected(ChangeEventArgs e)
+    {
+        return e.Value switch
+        {
+            string s => string.IsNullOrWhiteSpace(s) ? new List<string>() : new List<string> { s },
+            string[] arr => arr.ToList(),
+            IEnumerable<string> strs => strs.Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
+            IEnumerable<object> objs => objs.Select(o => o?.ToString() ?? string.Empty).Where(v => !string.IsNullOrWhiteSpace(v)).ToList(),
+            _ => new List<string>()
+        };
     }
 
     [JSInvokable]
