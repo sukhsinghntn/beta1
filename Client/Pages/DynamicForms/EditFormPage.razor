@@ -92,7 +92,7 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                                     <div class="ms-auto d-flex align-items-center gap-2">
                                         <div class="d-flex align-items-center gap-1">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseDepartmentFilter" @onchange="e => ToggleDepartmentFilter(secIndex, e)" id="edit-sec-@secIndex-dep" />
+                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseDepartmentFilter" @onchange="e => ToggleDepartmentFilter(secIndex, e)" id="edit-sec-@secIndex-dep" title="Check this box to filter this section to specific departments" />
                                                 <label class="form-check-label" for="edit-sec-@secIndex-dep">Department</label>
                                             </div>
                                             @if (sections[secIndex].UseDepartmentFilter)
@@ -102,7 +102,7 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                                         </div>
                                         <div class="d-flex align-items-center gap-1">
                                             <div class="form-check m-0">
-                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseLocationFilter" @onchange="e => ToggleLocationFilter(secIndex, e)" id="edit-sec-@secIndex-loc" />
+                                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseLocationFilter" @onchange="e => ToggleLocationFilter(secIndex, e)" id="edit-sec-@secIndex-loc" title="Check this box to filter this section to specific locations" />
                                                 <label class="form-check-label" for="edit-sec-@secIndex-loc">Location</label>
                                             </div>
                                             @if (sections[secIndex].UseLocationFilter)
