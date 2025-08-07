@@ -84,20 +84,38 @@
                                     <input class="form-control form-control-sm" placeholder="Section title" @bind="sections[secIndex].Title" />
                                     <div class="ms-auto section-filters text-end">
                                         <div class="small text-muted">Make this section only visible to:</div>
-                                        <div class="d-flex justify-content-end gap-1 mt-1">
-                                            <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
-                                                @foreach (var d in deptOptions)
-                                                {
-                                                    <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
-                                                }
-                                            </select>
-                                            <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnLocationsChanged(secIndex, e)">
-                                                @foreach (var l in locOptions)
-                                                {
-                                                    <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
-                                                }
-                                            </select>
-                                        </div>
+                    <div class="d-flex flex-column gap-1 mt-1">
+                        <div class="d-flex justify-content-end align-items-center gap-1">
+                            <div class="form-check m-0">
+                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseDepartmentFilter" @onchange="e => ToggleDepartmentFilter(secIndex, e)" id="sec-@secIndex-dep" />
+                                <label class="form-check-label" for="sec-@secIndex-dep">Department</label>
+                            </div>
+                            @if (sections[secIndex].UseDepartmentFilter)
+                            {
+                                <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnDepartmentsChanged(secIndex, e)">
+                                    @foreach (var d in deptOptions)
+                                    {
+                                        <option value="@d" selected="@sections[secIndex].Departments.Contains(d)">@d</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-1">
+                            <div class="form-check m-0">
+                                <input class="form-check-input" type="checkbox" checked="@sections[secIndex].UseLocationFilter" @onchange="e => ToggleLocationFilter(secIndex, e)" id="sec-@secIndex-loc" />
+                                <label class="form-check-label" for="sec-@secIndex-loc">Location</label>
+                            </div>
+                            @if (sections[secIndex].UseLocationFilter)
+                            {
+                                <select multiple class="form-select form-select-sm section-filter-select" @onchange="e => OnLocationsChanged(secIndex, e)">
+                                    @foreach (var l in locOptions)
+                                    {
+                                        <option value="@l" selected="@sections[secIndex].Locations.Contains(l)">@l</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                    </div>
                                         <div class="mt-1 d-flex justify-content-end gap-1">
                                             <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleCollapse(secIndex)">
                                                 <span class="material-icons">@(!sections[secIndex].IsCollapsed ? "expand_less" : "expand_more")</span>
@@ -246,14 +264,28 @@ else
     void OnDepartmentsChanged(int secIndex, ChangeEventArgs e)
     {
         sections[secIndex].Departments = ExtractSelected(e);
-        sections[secIndex].UseDepartmentFilter = sections[secIndex].Departments.Any();
         OnSectionRestrictionChanged();
     }
 
     void OnLocationsChanged(int secIndex, ChangeEventArgs e)
     {
         sections[secIndex].Locations = ExtractSelected(e);
-        sections[secIndex].UseLocationFilter = sections[secIndex].Locations.Any();
+        OnSectionRestrictionChanged();
+    }
+
+    void ToggleDepartmentFilter(int secIndex, ChangeEventArgs e)
+    {
+        sections[secIndex].UseDepartmentFilter = e.Value is bool b && b;
+        if (!sections[secIndex].UseDepartmentFilter)
+            sections[secIndex].Departments.Clear();
+        OnSectionRestrictionChanged();
+    }
+
+    void ToggleLocationFilter(int secIndex, ChangeEventArgs e)
+    {
+        sections[secIndex].UseLocationFilter = e.Value is bool b && b;
+        if (!sections[secIndex].UseLocationFilter)
+            sections[secIndex].Locations.Clear();
         OnSectionRestrictionChanged();
     }
 
