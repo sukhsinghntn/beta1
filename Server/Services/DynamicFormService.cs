@@ -56,34 +56,109 @@ namespace DynamicFormsApp.Server.Services
                 .Where(f => !dto.Fields.Any(n => string.Equals(n.Key, f.Key, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
+            if (deletions.Count > 0 && !existing.IsDraft)
+            {
+                // Archive current form with a new ID and table
+                var archive = new Form
+                {
+                    Name = existing.Name,
+                    Description = existing.Description,
+                    CreatedBy = existing.CreatedBy,
+                    RequireLogin = existing.RequireLogin,
+                    NotifyOnResponse = existing.NotifyOnResponse,
+                    NotificationEmail = existing.NotificationEmail,
+                    IsActive = false,
+                    IsDraft = existing.IsDraft,
+                    Version = existing.Version,
+                    PreviousVersionId = existing.PreviousVersionId,
+                    Fields = existing.Fields.Select(f => new FormField
+                    {
+                        Key = f.Key,
+                        Label = f.Label,
+                        FieldType = f.FieldType,
+                        Placeholder = f.Placeholder,
+                        CharLimit = f.CharLimit,
+                        MinCharLimit = f.MinCharLimit,
+                        IsRequired = f.IsRequired,
+                        OptionsJson = f.OptionsJson,
+                        Row = f.Row,
+                        Column = f.Column
+                    }).ToList()
+                };
+
+                _db.Forms.Add(archive);
+                await _db.SaveChangesAsync();
+
+                var rawName = SanitizeKey(existing.Name);
+                var oldTable = $"Form_{existing.Id}_{rawName}";
+                var archiveTable = $"Form_{archive.Id}_{rawName}";
+                await _db.Database.ExecuteSqlRawAsync($"EXEC sp_rename '{oldTable}', '{archiveTable}'");
+
+                // Prepare new table for the edited form
+                _db.FormFields.RemoveRange(existing.Fields);
+                existing.Fields.Clear();
+
+                var newTable = $"Form_{existing.Id}_{rawName}";
+                var sb = new StringBuilder($"CREATE TABLE [{newTable}] (ResponseId INT IDENTITY(1,1) PRIMARY KEY, CreatedAt DATETIME2 NOT NULL");
+                if (dto.RequireLogin)
+                {
+                    sb.Append(", [ResponderName] NVARCHAR(255) NULL");
+                }
+
+                var keySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var fld in dto.Fields)
+                {
+                    var keySource = string.IsNullOrWhiteSpace(fld.Key) ? fld.Label : fld.Key;
+                    var key = GetUniqueKey(keySource, keySet);
+                    var newField = new FormField
+                    {
+                        Key = key,
+                        Label = fld.Label,
+                        FieldType = fld.FieldType,
+                        Placeholder = fld.Placeholder,
+                        CharLimit = fld.CharLimit,
+                        MinCharLimit = fld.MinCharLimit,
+                        IsRequired = fld.IsRequired,
+                        OptionsJson = fld.OptionsJson,
+                        Row = fld.Row,
+                        Column = fld.Column
+                    };
+                    existing.Fields.Add(newField);
+
+                    if (newField.FieldType != "section" && newField.FieldType != "title")
+                    {
+                        sb.Append($", [{newField.Key}] {MapToSqlType(newField.FieldType)} {(newField.IsRequired ? "NOT NULL" : "NULL")}");
+                    }
+                }
+                sb.Append(");");
+                await _db.Database.ExecuteSqlRawAsync(sb.ToString());
+
+                existing.Version += 1;
+                existing.PreviousVersionId = archive.Id;
+                existing.Name = dto.Name;
+                existing.Description = dto.Description;
+                existing.RequireLogin = dto.RequireLogin;
+                existing.NotifyOnResponse = dto.NotifyOnResponse;
+                existing.NotificationEmail = dto.NotificationEmail;
+                existing.IsActive = dto.IsActive;
+                existing.IsDraft = dto.IsDraft;
+
+                await _db.SaveChangesAsync();
+                return existing.Id;
+            }
+
             if (deletions.Count > 0)
             {
-                if (!existing.IsDraft)
+                var rawName = SanitizeKey(existing.Name);
+                var tableName = $"Form_{existing.Id}_{rawName}";
+                foreach (var del in deletions)
                 {
-                    // Deleting fields requires a new version with a fresh table
-                    existing.IsActive = false;
-                    await _db.SaveChangesAsync();
-
-                    var newId = await CreateFormAsync(dto.Name, dto.Description, dto.Fields, user,
-                        dto.RequireLogin, dto.NotifyOnResponse, dto.NotificationEmail, dto.IsActive,
-                        dto.IsDraft, existing.Version + 1, existing.Id);
-
-                    return newId;
-                }
-                else
-                {
-                    var rawName = SanitizeKey(existing.Name);
-                    var tableName = $"Form_{existing.Id}_{rawName}";
-                    foreach (var del in deletions)
-                    {
-                        var sql = $"ALTER TABLE [{tableName}] DROP COLUMN [{del.Key}];";
-                        await _db.Database.ExecuteSqlRawAsync(sql);
-                        _db.FormFields.Remove(del);
-                    }
+                    var sql = $"ALTER TABLE [{tableName}] DROP COLUMN [{del.Key}];";
+                    await _db.Database.ExecuteSqlRawAsync(sql);
+                    _db.FormFields.Remove(del);
                 }
             }
 
-            // Update in place when no fields are removed
             existing.Name = dto.Name;
             existing.Description = dto.Description;
             existing.RequireLogin = dto.RequireLogin;
@@ -92,7 +167,7 @@ namespace DynamicFormsApp.Server.Services
             existing.IsActive = dto.IsActive;
             existing.IsDraft = dto.IsDraft;
 
-            var keySet = new HashSet<string>(existing.Fields.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
+            var existingKeys = new HashSet<string>(existing.Fields.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
 
             foreach (var fld in dto.Fields)
             {
@@ -112,7 +187,7 @@ namespace DynamicFormsApp.Server.Services
                 else
                 {
                     var keySource = string.IsNullOrWhiteSpace(fld.Key) ? fld.Label : fld.Key;
-                    var key = GetUniqueKey(keySource, keySet);
+                    var key = GetUniqueKey(keySource, existingKeys);
                     var newField = new FormField
                     {
                         Key = key,
@@ -133,8 +208,6 @@ namespace DynamicFormsApp.Server.Services
                     if (newField.FieldType != "section" && newField.FieldType != "title")
                     {
                         var sqlType = MapToSqlType(newField.FieldType);
-                        // Existing response rows may prevent adding a NOT NULL column.
-                        // Always allow nulls for new columns to avoid migration issues.
                         var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
                         await _db.Database.ExecuteSqlRawAsync(sql);
                     }
