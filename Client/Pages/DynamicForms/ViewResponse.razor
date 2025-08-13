@@ -215,6 +215,13 @@ else
                 builder.CloseElement();
             }
         }
+        else if (field.FieldType == "image")
+        {
+            if (!string.IsNullOrWhiteSpace(field.ImageUrl))
+            {
+                builder.AddMarkupContent(10, $"<img src='/{field.ImageUrl}' class='img-fluid' />");
+            }
+        }
         else if (field.FieldType == "checkbox")
         {
             if (!string.IsNullOrWhiteSpace(val))
@@ -264,6 +271,11 @@ else
             }
             return val;
         }
+        if (field.FieldType == "image")
+        {
+            return string.Empty;
+        }
+
         return val;
     }
 

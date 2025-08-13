@@ -56,57 +56,58 @@ namespace DynamicFormsApp.Server.Services
                 .Where(f => !dto.Fields.Any(n => string.Equals(n.Key, f.Key, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
-            if (deletions.Count > 0)
+            if (deletions.Count > 0 && !existing.IsDraft)
             {
-                if (!existing.IsDraft)
+                // Archive current form with a new ID and table
+                var archive = new Form
                 {
-                    // Deleting fields requires a new version with a fresh table
-                    existing.IsActive = false;
-                    await _db.SaveChangesAsync();
-
-                    var newId = await CreateFormAsync(dto.Name, dto.Description, dto.Fields, user,
-                        dto.RequireLogin, dto.NotifyOnResponse, dto.NotificationEmail, dto.IsActive,
-                        dto.IsDraft, existing.Version + 1, existing.Id);
-
-                    return newId;
-                }
-                else
-                {
-                    var rawName = SanitizeKey(existing.Name);
-                    var tableName = $"Form_{existing.Id}_{rawName}";
-                    foreach (var del in deletions)
+                    Name = existing.Name,
+                    Description = existing.Description,
+                    CreatedBy = existing.CreatedBy,
+                    RequireLogin = existing.RequireLogin,
+                    NotifyOnResponse = existing.NotifyOnResponse,
+                    NotificationEmail = existing.NotificationEmail,
+                    IsActive = false,
+                    IsDraft = existing.IsDraft,
+                    Version = existing.Version,
+                    PreviousVersionId = existing.PreviousVersionId,
+                    Fields = existing.Fields.Select(f => new FormField
                     {
-                        var sql = $"ALTER TABLE [{tableName}] DROP COLUMN [{del.Key}];";
-                        await _db.Database.ExecuteSqlRawAsync(sql);
-                        _db.FormFields.Remove(del);
-                    }
-                }
-            }
+                        Key = f.Key,
+                        Label = f.Label,
+                        FieldType = f.FieldType,
+                        Placeholder = f.Placeholder,
+                        CharLimit = f.CharLimit,
+                        MinCharLimit = f.MinCharLimit,
+                        IsRequired = f.IsRequired,
+                        OptionsJson = f.OptionsJson,
+                        ImageUrl = f.ImageUrl,
+                        Row = f.Row,
+                        Column = f.Column
+                    }).ToList()
+                };
 
-            // Update in place when no fields are removed
-            existing.Name = dto.Name;
-            existing.Description = dto.Description;
-            existing.RequireLogin = dto.RequireLogin;
-            existing.NotifyOnResponse = dto.NotifyOnResponse;
-            existing.NotificationEmail = dto.NotificationEmail;
-            existing.IsActive = dto.IsActive;
-            existing.IsDraft = dto.IsDraft;
+                _db.Forms.Add(archive);
+                await _db.SaveChangesAsync();
 
-            var keySet = new HashSet<string>(existing.Fields.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
+                var rawName = SanitizeKey(existing.Name);
+                var oldTable = $"Form_{existing.Id}_{rawName}";
+                var archiveTable = $"Form_{archive.Id}_{rawName}";
+                await _db.Database.ExecuteSqlRawAsync($"EXEC sp_rename '{oldTable}', '{archiveTable}'");
 
-            foreach (var fld in dto.Fields)
-            {
-                var match = existing.Fields.FirstOrDefault(f => f.Key.Equals(fld.Key, StringComparison.OrdinalIgnoreCase));
-                if (match != null)
+                // Prepare new table for the edited form
+                _db.FormFields.RemoveRange(existing.Fields);
+                existing.Fields.Clear();
+
+                var newTable = $"Form_{existing.Id}_{rawName}";
+                var sb = new StringBuilder($"CREATE TABLE [{newTable}] (ResponseId INT IDENTITY(1,1) PRIMARY KEY, CreatedAt DATETIME2 NOT NULL");
+                if (dto.RequireLogin)
                 {
-                    match.Label = fld.Label;
-                    match.FieldType = fld.FieldType;
-                    match.IsRequired = fld.IsRequired;
-                    match.OptionsJson = fld.OptionsJson;
-                    match.Row = fld.Row;
-                    match.Column = fld.Column;
+                    sb.Append(", [ResponderName] NVARCHAR(255) NULL");
                 }
-                else
+
+                var keySet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var fld in dto.Fields)
                 {
                     var keySource = string.IsNullOrWhiteSpace(fld.Key) ? fld.Label : fld.Key;
                     var key = GetUniqueKey(keySource, keySet);
@@ -115,8 +116,92 @@ namespace DynamicFormsApp.Server.Services
                         Key = key,
                         Label = fld.Label,
                         FieldType = fld.FieldType,
+                        Placeholder = fld.Placeholder,
+                        CharLimit = fld.CharLimit,
+                        MinCharLimit = fld.MinCharLimit,
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
+                        ImageUrl = fld.ImageUrl,
+                        Row = fld.Row,
+                        Column = fld.Column
+                    };
+                    existing.Fields.Add(newField);
+
+                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image")
+                    {
+                        sb.Append($", [{newField.Key}] {MapToSqlType(newField.FieldType)} {(newField.IsRequired ? "NOT NULL" : "NULL")}");
+                    }
+                }
+                sb.Append(");");
+                await _db.Database.ExecuteSqlRawAsync(sb.ToString());
+
+                existing.Version += 1;
+                existing.PreviousVersionId = archive.Id;
+                existing.Name = dto.Name;
+                existing.Description = dto.Description;
+                existing.RequireLogin = dto.RequireLogin;
+                existing.NotifyOnResponse = dto.NotifyOnResponse;
+                existing.NotificationEmail = dto.NotificationEmail;
+                existing.IsActive = dto.IsActive;
+                existing.IsDraft = dto.IsDraft;
+
+                await _db.SaveChangesAsync();
+                return existing.Id;
+            }
+
+            if (deletions.Count > 0)
+            {
+                var rawName = SanitizeKey(existing.Name);
+                var tableName = $"Form_{existing.Id}_{rawName}";
+                foreach (var del in deletions)
+                {
+                    var sql = $"ALTER TABLE [{tableName}] DROP COLUMN [{del.Key}];";
+                    await _db.Database.ExecuteSqlRawAsync(sql);
+                    _db.FormFields.Remove(del);
+                }
+            }
+
+            existing.Name = dto.Name;
+            existing.Description = dto.Description;
+            existing.RequireLogin = dto.RequireLogin;
+            existing.NotifyOnResponse = dto.NotifyOnResponse;
+            existing.NotificationEmail = dto.NotificationEmail;
+            existing.IsActive = dto.IsActive;
+            existing.IsDraft = dto.IsDraft;
+
+            var existingKeys = new HashSet<string>(existing.Fields.Select(f => f.Key), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var fld in dto.Fields)
+            {
+                var match = existing.Fields.FirstOrDefault(f => f.Key.Equals(fld.Key, StringComparison.OrdinalIgnoreCase));
+                if (match != null)
+                {
+                    match.Label = fld.Label;
+                    match.FieldType = fld.FieldType;
+                    match.Placeholder = fld.Placeholder;
+                    match.CharLimit = fld.CharLimit;
+                    match.MinCharLimit = fld.MinCharLimit;
+                    match.IsRequired = fld.IsRequired;
+                    match.OptionsJson = fld.OptionsJson;
+                    match.ImageUrl = fld.ImageUrl;
+                    match.Row = fld.Row;
+                    match.Column = fld.Column;
+                }
+                else
+                {
+                    var keySource = string.IsNullOrWhiteSpace(fld.Key) ? fld.Label : fld.Key;
+                    var key = GetUniqueKey(keySource, existingKeys);
+                    var newField = new FormField
+                    {
+                        Key = key,
+                        Label = fld.Label,
+                        FieldType = fld.FieldType,
+                        Placeholder = fld.Placeholder,
+                        CharLimit = fld.CharLimit,
+                        MinCharLimit = fld.MinCharLimit,
+                        IsRequired = fld.IsRequired,
+                        OptionsJson = fld.OptionsJson,
+                        ImageUrl = fld.ImageUrl,
                         Row = fld.Row,
                         Column = fld.Column
                     };
@@ -124,11 +209,12 @@ namespace DynamicFormsApp.Server.Services
 
                     var rawName = SanitizeKey(existing.Name);
                     var tableName = $"Form_{existing.Id}_{rawName}";
-                    var sqlType = MapToSqlType(newField.FieldType);
-                    // Existing response rows may prevent adding a NOT NULL column.
-                    // Always allow nulls for new columns to avoid migration issues.
-                    var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
-                    await _db.Database.ExecuteSqlRawAsync(sql);
+                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image")
+                    {
+                        var sqlType = MapToSqlType(newField.FieldType);
+                        var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
+                        await _db.Database.ExecuteSqlRawAsync(sql);
+                    }
                 }
             }
 
@@ -162,8 +248,12 @@ namespace DynamicFormsApp.Server.Services
                     Key = GetUniqueKey(keySource, keySet),
                     Label = fld.Label,
                     FieldType = fld.FieldType,
+                    Placeholder = fld.Placeholder,
+                    CharLimit = fld.CharLimit,
+                    MinCharLimit = fld.MinCharLimit,
                     IsRequired = fld.IsRequired,
                     OptionsJson = fld.OptionsJson,
+                    ImageUrl = fld.ImageUrl,
                     Row = fld.Row,
                     Column = fld.Column
                 });
@@ -184,6 +274,8 @@ namespace DynamicFormsApp.Server.Services
 
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image")
+                    continue;
                 sb.Append($", [{fld.Key}] {MapToSqlType(fld.FieldType)} {(fld.IsRequired ? "NOT NULL" : "NULL")}");
             }
             sb.Append(");");
@@ -212,21 +304,22 @@ namespace DynamicFormsApp.Server.Services
             var rawName = SanitizeKey(form.Name);
             var tableName = $"Form_{formId}_{rawName}";
 
-            var cols = string.Join(", ", values.Keys.Select(k => $"[{k}]")) + ", CreatedAt";
-            var paramNames = string.Join(", ",
-                values.Keys.Select((k, i) => $"@p{i}")
-                           .Concat(new[] { "@p_created" }));
-            if (form.RequireLogin)
-            {
-                cols += ", ResponderName";
-                paramNames += ", @p_responder";
-            }
+            var validFields = form.Fields
+                .Where(f => f.FieldType != "section" && f.FieldType != "title" && f.FieldType != "image")
+                .Select(f => f.Key)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
+            var filtered = values
+                .Where(kv => validFields.Contains(kv.Key))
+                .ToDictionary(k => k.Key, v => v.Value);
+
+            var cols = string.Join(", ", filtered.Keys.Select(k => $"[{k}]"));
+            var paramNames = string.Join(", ",
+                filtered.Keys.Select((k, i) => $"@p{i}"));
 
             var sqlParams = new List<SqlParameter>();
             int idx = 0;
-            foreach (var kv in values)
+            foreach (var kv in filtered)
             {
                 object raw = kv.Value;
                 if (raw is JsonElement je)
@@ -254,11 +347,18 @@ namespace DynamicFormsApp.Server.Services
                 idx++;
             }
 
+            cols = string.IsNullOrEmpty(cols) ? "CreatedAt" : cols + ", CreatedAt";
+            paramNames = string.IsNullOrEmpty(paramNames) ? "@p_created" : paramNames + ", @p_created";
             sqlParams.Add(new SqlParameter("@p_created", DateTime.UtcNow));
+
             if (form.RequireLogin)
             {
+                cols += ", ResponderName";
+                paramNames += ", @p_responder";
                 sqlParams.Add(new SqlParameter("@p_responder", (object?)responderName ?? DBNull.Value));
             }
+
+            var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
             await _db.Database.ExecuteSqlRawAsync(sql, sqlParams.ToArray());
 
             return form;
@@ -603,6 +703,9 @@ namespace DynamicFormsApp.Server.Services
             "file" => "NVARCHAR(MAX)",
             "checkbox" => "NVARCHAR(MAX)",      // Store as JSON array
             "dropdown" => "NVARCHAR(255)",
+            "user" => "NVARCHAR(255)",
+            "department" => "NVARCHAR(255)",
+            "location" => "NVARCHAR(255)",
             "radio" => "NVARCHAR(255)",
             "textarea" => "NVARCHAR(MAX)",
             "grid_radio" => "NVARCHAR(MAX)",    // JSON object
