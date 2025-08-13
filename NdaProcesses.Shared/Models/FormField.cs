@@ -18,6 +18,8 @@ namespace DynamicFormsApp.Shared.Models
         public string? OptionsJson { get; set; }
 
         public string? ImageUrl { get; set; }
+        public int? ImageWidth { get; set; }
+        public int? ImageHeight { get; set; }
 
         // Optional: for layout (future grid fields support)
         public int? Row { get; set; }

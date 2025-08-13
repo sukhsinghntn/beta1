@@ -498,7 +498,9 @@ async Task AddField(int section, int row, string fieldType = "text")
             GridRows = new List<string>(field.GridRows),
             ScaleMin = field.ScaleMin,
             ScaleMax = field.ScaleMax,
-            ImageUrl = field.ImageUrl
+            ImageUrl = field.ImageUrl,
+            ImageWidth = field.ImageWidth,
+            ImageHeight = field.ImageHeight
         };
         var list = sections[section].Rows[row].Fields;
         if (list.Count >= 4)
@@ -657,6 +659,8 @@ List<object> BuildFieldPayload()
                     f.MinCharLimit,
                     f.IsRequired,
                     f.ImageUrl,
+                    f.ImageWidth,
+                    f.ImageHeight,
                     Row = rowCounter,
                     Column = c,
                     OptionsJson = optionsJson
@@ -729,7 +733,9 @@ List<object> BuildFieldPayload()
                     CharLimit = f.CharLimit,
                     MinCharLimit = f.MinCharLimit,
                     IsRequired = f.IsRequired,
-                    ImageUrl = f.ImageUrl ?? string.Empty
+                    ImageUrl = f.ImageUrl ?? string.Empty,
+                    ImageWidth = f.ImageWidth,
+                    ImageHeight = f.ImageHeight
                 };
                 if (!string.IsNullOrWhiteSpace(f.OptionsJson))
                 {

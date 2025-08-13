@@ -219,7 +219,8 @@ else
         {
             if (!string.IsNullOrWhiteSpace(field.ImageUrl))
             {
-                builder.AddMarkupContent(10, $"<img src='/{field.ImageUrl}' class='img-fluid' />");
+                var style = $"max-width:100%;{(field.ImageWidth.HasValue ? $"width:{field.ImageWidth}px;" : string.Empty)}{(field.ImageHeight.HasValue ? $"height:{field.ImageHeight}px;" : string.Empty)}";
+                builder.AddMarkupContent(10, $"<img src='/{field.ImageUrl}' style='{style}' />");
             }
         }
         else if (field.FieldType == "checkbox")

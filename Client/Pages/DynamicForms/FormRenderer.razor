@@ -165,7 +165,7 @@ else
                     case "image":
                         @if (!string.IsNullOrWhiteSpace(fld.ImageUrl))
                         {
-                            <img src="/@fld.ImageUrl" class="img-fluid" />
+                            <img src="/@fld.ImageUrl" style="@GetImageStyle(fld)" />
                         }
                         break;
 
@@ -229,6 +229,9 @@ else
     private List<string> locations = new();
     private string? statusMessage;
     private DeletedFormInfo? unavailableInfo;
+
+    string GetImageStyle(FormField f) =>
+        $"max-width:100%;{(f.ImageWidth.HasValue ? $"width:{f.ImageWidth}px;" : string.Empty)}{(f.ImageHeight.HasValue ? $"height:{f.ImageHeight}px;" : string.Empty)}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

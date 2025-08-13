@@ -451,7 +451,9 @@ else
             ScaleMin = field.ScaleMin,
             ScaleMax = field.ScaleMax,
             Placeholder = field.Placeholder,
-            ImageUrl = field.ImageUrl
+            ImageUrl = field.ImageUrl,
+            ImageWidth = field.ImageWidth,
+            ImageHeight = field.ImageHeight
         };
         var list = sections[section].Rows[row].Fields;
         if (list.Count >= 4)
@@ -602,6 +604,8 @@ else
                         f.MinCharLimit,
                         f.IsRequired,
                         f.ImageUrl,
+                        f.ImageWidth,
+                        f.ImageHeight,
                         Row = rowCounter,
                         Column = c,
                         OptionsJson = optionsJson

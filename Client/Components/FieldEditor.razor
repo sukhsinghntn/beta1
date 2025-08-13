@@ -124,7 +124,17 @@
                 <InputFile OnChange="OnImageSelected" />
                 @if (!string.IsNullOrWhiteSpace(Field.ImageUrl))
                 {
-                    <img src="/@Field.ImageUrl" class="img-fluid mt-2" />
+                    <img src="/@Field.ImageUrl" class="mt-2" style="@GetImageStyle()" />
+                    <div class="row mt-2">
+                        <div class="col">
+                            <label class="form-label">Width (px)</label>
+                            <input type="number" class="form-control" @bind="Field.ImageWidth" />
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Height (px)</label>
+                            <input type="number" class="form-control" @bind="Field.ImageHeight" />
+                        </div>
+                    </div>
                 }
             </div>
         }
@@ -170,6 +180,9 @@
         "image" => "Image",
         _ => type
     };
+
+    string GetImageStyle() =>
+        $"max-width:100%;{(Field.ImageWidth.HasValue ? $"width:{Field.ImageWidth}px;" : string.Empty)}{(Field.ImageHeight.HasValue ? $"height:{Field.ImageHeight}px;" : string.Empty)}";
 
     void MoveOptionUp(int index)
     {

@@ -131,7 +131,7 @@
                         case "image":
                             @if (!string.IsNullOrWhiteSpace(field.ImageUrl))
                             {
-                                <img src="/@field.ImageUrl" class="img-fluid" />
+                                <img src="/@field.ImageUrl" style="@GetImageStyle(field)" />
                             }
                             break;
                         case "title":
@@ -151,4 +151,7 @@
 @code {
     [Parameter] public List<DesignerSection> Sections { get; set; } = new();
     [Parameter] public string? FormName { get; set; }
+
+    string GetImageStyle(DesignerField f) =>
+        $"max-width:100%;{(f.ImageWidth.HasValue ? $"width:{f.ImageWidth}px;" : string.Empty)}{(f.ImageHeight.HasValue ? $"height:{f.ImageHeight}px;" : string.Empty)}";
 }

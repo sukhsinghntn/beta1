@@ -13,5 +13,7 @@ namespace DynamicFormsApp.Shared.Models
         public int? Row { get; set; }
         public int? Column { get; set; }
         public string? ImageUrl { get; set; }
+        public int? ImageWidth { get; set; }
+        public int? ImageHeight { get; set; }
     }
 }

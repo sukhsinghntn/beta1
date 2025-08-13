@@ -12,6 +12,8 @@
         public bool IsRequired { get; set; }
 
         public string ImageUrl { get; set; } = string.Empty;
+        public int? ImageWidth { get; set; }
+        public int? ImageHeight { get; set; }
 
         // Dynamic options
         public List<string> OptionItems { get; set; } = new();

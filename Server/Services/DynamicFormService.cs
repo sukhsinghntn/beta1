@@ -82,6 +82,8 @@ namespace DynamicFormsApp.Server.Services
                         IsRequired = f.IsRequired,
                         OptionsJson = f.OptionsJson,
                         ImageUrl = f.ImageUrl,
+                        ImageWidth = f.ImageWidth,
+                        ImageHeight = f.ImageHeight,
                         Row = f.Row,
                         Column = f.Column
                     }).ToList()
@@ -122,6 +124,8 @@ namespace DynamicFormsApp.Server.Services
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
                         ImageUrl = fld.ImageUrl,
+                        ImageWidth = fld.ImageWidth,
+                        ImageHeight = fld.ImageHeight,
                         Row = fld.Row,
                         Column = fld.Column
                     };
@@ -184,6 +188,8 @@ namespace DynamicFormsApp.Server.Services
                     match.IsRequired = fld.IsRequired;
                     match.OptionsJson = fld.OptionsJson;
                     match.ImageUrl = fld.ImageUrl;
+                    match.ImageWidth = fld.ImageWidth;
+                    match.ImageHeight = fld.ImageHeight;
                     match.Row = fld.Row;
                     match.Column = fld.Column;
                 }
@@ -202,6 +208,8 @@ namespace DynamicFormsApp.Server.Services
                         IsRequired = fld.IsRequired,
                         OptionsJson = fld.OptionsJson,
                         ImageUrl = fld.ImageUrl,
+                        ImageWidth = fld.ImageWidth,
+                        ImageHeight = fld.ImageHeight,
                         Row = fld.Row,
                         Column = fld.Column
                     };
@@ -254,6 +262,8 @@ namespace DynamicFormsApp.Server.Services
                     IsRequired = fld.IsRequired,
                     OptionsJson = fld.OptionsJson,
                     ImageUrl = fld.ImageUrl,
+                    ImageWidth = fld.ImageWidth,
+                    ImageHeight = fld.ImageHeight,
                     Row = fld.Row,
                     Column = fld.Column
                 });
