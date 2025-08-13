@@ -113,3 +113,17 @@ body[data-bs-theme="dark"] .designer-row::before {
     background: #343a40;
     color: #adb5bd;
 }
+.image-resize-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.image-resize-wrapper .resize-handle {
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border: 1px solid #000;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+}
