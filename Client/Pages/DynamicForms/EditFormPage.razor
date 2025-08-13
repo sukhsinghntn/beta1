@@ -154,15 +154,9 @@ else if (!string.IsNullOrEmpty(deletedMessage))
                                                                  OnDuplicate="async f => await DuplicateField(secIndex, rowIndex, f)" />
                                                 </div>
                                             }
-                                            <div class="col-12 no-drop">
-                                                <button class="btn btn-sm btn-primary" @onclick="() => AddField(secIndex, rowIndex)">+ Add Column</button>
-                                            </div>
                                         </div>
                                     }
                                     <div class="row-dropzone" data-section="@secIndex" data-insert="@sections[secIndex].Rows.Count"></div>
-                                    <div class="d-grid mb-3">
-                                        <button class="btn btn-primary" @onclick="() => AddRow(secIndex)">+ Add Row</button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -412,13 +406,6 @@ public void OnSortUpdate(int fromSection, int fromRow, int oldIndex, int toSecti
     }
 }
 
-async Task AddRow(int section)
-{
-    PushUndo();
-    sections[section].Rows.Add(new DesignerRow());
-    await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
-}
-
     DesignerField CreateField(string fieldType) => new DesignerField
     {
         FieldType = fieldType,
@@ -440,24 +427,6 @@ async Task AddRow(int section)
                       fieldType == "textarea" ? "Paragraph" :
                       fieldType == "dropdown" ? "Select one from dropdown" : string.Empty
     };
-
-async Task AddField(int section, int row, string fieldType = "text")
-{
-    if (sections[section].Rows[row].Fields.Count >= 4)
-    {
-        NotificationService.Notify(new NotificationMessage
-        {
-            Severity = NotificationSeverity.Warning,
-            Summary = "Column limit reached",
-            Detail = "A row can contain at most four columns."
-        });
-        return;
-    }
-    PushUndo();
-    sections[section].Rows[row].Fields.Add(CreateField(fieldType));
-    await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
-    await JS.InvokeVoidAsync("focusFieldLabel", section, row, sections[section].Rows[row].Fields.Count - 1);
-}
 
     async Task RemoveField(int section, int row, DesignerField field)
     {

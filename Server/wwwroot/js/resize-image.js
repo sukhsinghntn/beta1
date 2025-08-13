@@ -22,6 +22,7 @@ window.initImageResize = (el, dotnetHelper) => {
     };
     handle.addEventListener('mousedown', e => {
         e.preventDefault();
+        e.stopPropagation();
         startX = e.clientX;
         startY = e.clientY;
         startW = img.offsetWidth;
@@ -29,4 +30,5 @@ window.initImageResize = (el, dotnetHelper) => {
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
+    handle.addEventListener('click', e => e.stopPropagation());
 };

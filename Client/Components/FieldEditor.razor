@@ -272,6 +272,12 @@
 
     async Task PromptImageUpload()
     {
+        Field.ImageUrl = string.Empty;
+        Field.Key = string.Empty;
+        Field.Label = string.Empty;
+        Field.ImageWidth = null;
+        Field.ImageHeight = null;
+        await InvokeAsync(StateHasChanged);
         await JS.InvokeVoidAsync("triggerClick", imageInput?.Element);
     }
 
