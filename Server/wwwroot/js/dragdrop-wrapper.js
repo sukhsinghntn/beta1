@@ -73,3 +73,7 @@ window.focusLastInput = (container) => {
         }
     });
 };
+
+window.triggerClick = (el) => {
+    if (el) el.click();
+};
