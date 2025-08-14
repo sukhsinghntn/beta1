@@ -13,5 +13,7 @@ namespace DynamicFormsApp.Shared.Services
         Task<UserModel> GetUserData(string userName);
         Task<List<UserModel>> GetAllUsers();
         Task<List<UserModel>> SearchUsers(string term);
+        Task<List<string>> GetDepartments();
+        Task<List<string>> GetLocations();
     }
 }
