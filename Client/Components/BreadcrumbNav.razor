@@ -1,20 +1,22 @@
 @inject NavigationManager Navigation
+@inject HttpClient Http
 @using Microsoft.AspNetCore.Components.Routing
 @using System.Globalization
+@using DynamicFormsApp.Shared.Models
 @implements IDisposable
 @code {
     private List<(string Label, string Path)> items = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        Build();
+        await BuildAsync();
         Navigation.LocationChanged += OnLocationChanged;
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        Build();
-        InvokeAsync(StateHasChanged);
+        await BuildAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     void IDisposable.Dispose()
@@ -22,7 +24,7 @@
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
-    private void Build()
+    private async Task BuildAsync()
     {
         items.Clear();
         var rel = Navigation.ToBaseRelativePath(Navigation.Uri);
@@ -30,16 +32,30 @@
         rel = rel.Split('?',2)[0];
         var segs = rel.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var path = string.Empty;
+        string? prev = null;
         foreach (var seg in segs)
         {
             path += "/" + seg;
-            items.Add((Format(seg), path));
+            var label = await FormatAsync(seg, prev);
+            items.Add((label, path));
+            prev = seg;
         }
     }
 
-    private static string Format(string seg)
+    private async Task<string> FormatAsync(string seg, string? prev)
     {
         seg = seg.Split('?',2)[0];
+        if (int.TryParse(seg, out var id) && string.Equals(prev, "forms", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var form = await Http.GetFromJsonAsync<Form>($"api/forms/{id}");
+                if (!string.IsNullOrWhiteSpace(form?.Name))
+                    return form.Name;
+            }
+            catch { }
+            return seg;
+        }
         if (int.TryParse(seg, out _)) return seg;
         var text = seg.Replace('-', ' ');
         return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text);
