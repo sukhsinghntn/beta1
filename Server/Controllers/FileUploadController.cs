@@ -21,8 +21,11 @@ namespace DynamicFormsApp.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> Upload([FromForm] IFormFile file)
         {
+            const long maxSize = 5 * 1024 * 1024;
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
+            if (file.Length > maxSize)
+                return BadRequest("File exceeds 5 MB limit.");
 
             // Generate a unique filename to prevent overwriting
             var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";

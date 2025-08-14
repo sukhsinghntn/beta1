@@ -290,8 +290,21 @@
     {
         var file = e.File;
         if (file == null) return;
+
+        const long maxSize = 5 * 1024 * 1024;
+        if (file.Size > maxSize)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "File too large",
+                Detail = "Images must be 5 MB or smaller."
+            });
+            return;
+        }
+
         var content = new MultipartFormDataContent();
-        var stream = new StreamContent(file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+        var stream = new StreamContent(file.OpenReadStream(maxAllowedSize: maxSize));
         content.Add(stream, "file", file.Name);
         var response = await Http.PostAsync("api/FileUpload", content);
         if (response.IsSuccessStatusCode)
@@ -305,6 +318,15 @@
             Field.ImageHeight = null;
             imageResizeInit = false;
             await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Upload failed",
+                Detail = "Unable to upload image."
+            });
         }
     }
 
