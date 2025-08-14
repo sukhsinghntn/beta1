@@ -141,7 +141,9 @@
             }
             responses = await respData.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>();
 
-            var fieldKeys = form.Fields.Select(f => f.Key);
+            var fieldKeys = form.Fields
+                .Where(f => f.FieldType != "section" && f.FieldType != "title" && f.FieldType != "image")
+                .Select(f => f.Key);
             columns = new[] { "ResponseId", "CreatedAt" }
                 .Concat(fieldKeys)
                 .ToArray();
