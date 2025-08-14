@@ -24,7 +24,7 @@
             @foreach (var field in row.Fields)
             {
                 <div class="col-12 col-md-@(12 / (row.Fields.Count == 0 ? 1 : row.Fields.Count)) mb-3">
-                    @if (field.FieldType != "title" && field.FieldType != "section" && field.FieldType != "image")
+                    @if (field.FieldType != "title" && field.FieldType != "section" && field.FieldType != "image" && field.FieldType != "statictext")
                     {
                         <label class="form-label">@field.Label</label>
                     }
@@ -133,6 +133,9 @@
                             {
                                 <img src="/@field.ImageUrl" style="@GetImageStyle(field)" />
                             }
+                            break;
+                        case "statictext":
+                            <p>@field.Label</p>
                             break;
                         case "title":
                             <h4 class="text-muted">@field.Label</h4>

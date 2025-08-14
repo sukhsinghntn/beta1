@@ -74,9 +74,12 @@ else
         {
             <div class="col-12 col-md-@(12 / (rowGroup.Count() == 0 ? 1 : rowGroup.Count()))">
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">@fld.Label</label>
-                            <div class="form-control-plaintext border rounded bg-light p-2" style="color:black">
-                                @DisplayValue(fld)
+                    @if (fld.FieldType != "image" && fld.FieldType != "statictext")
+                    {
+                        <label class="form-label fw-semibold">@fld.Label</label>
+                    }
+                    <div class="form-control-plaintext border rounded bg-light p-2" style="color:black">
+                        @DisplayValue(fld)
                     </div>
                 </div>
             </div>
@@ -89,7 +92,8 @@ else
             <tr><th>Field</th><th>Value</th></tr>
         </thead>
         <tbody>
-        @foreach (var fld in form.Fields.OrderBy(f => f.Row ?? 0).ThenBy(f => f.Column ?? 0))
+        @foreach (var fld in form.Fields.OrderBy(f => f.Row ?? 0).ThenBy(f => f.Column ?? 0)
+            .Where(f => f.FieldType != "image" && f.FieldType != "statictext"))
         {
             <tr>
                 <th>@fld.Label</th>
@@ -223,6 +227,10 @@ else
                 builder.AddMarkupContent(10, $"<img src='/{field.ImageUrl}' style='{style}' />");
             }
         }
+        else if (field.FieldType == "statictext")
+        {
+            builder.AddContent(11, field.Label);
+        }
         else if (field.FieldType == "checkbox")
         {
             if (!string.IsNullOrWhiteSpace(val))
@@ -272,7 +280,7 @@ else
             }
             return val;
         }
-        if (field.FieldType == "image")
+        if (field.FieldType == "image" || field.FieldType == "statictext")
         {
             return string.Empty;
         }

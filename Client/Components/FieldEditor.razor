@@ -12,11 +12,7 @@
         <div class="d-flex justify-content-between mb-2">
             <div class="d-flex align-items-center gap-2">
                 <span class="drag-handle text-muted"><span class="material-icons fs-4">drag_indicator</span></span>
-                @if (Field.FieldType == "image")
-                {
-                    <input class="form-control form-control-sm" value="@Field.Label" readonly />
-                }
-                else
+                @if (Field.FieldType != "image" && Field.FieldType != "statictext")
                 {
                     <input class="form-control form-control-sm" placeholder="Field label" @bind="Field.Label" />
                 }
@@ -45,6 +41,14 @@
                     <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.MinCharLimit" min="0" placeholder="Min" />
                     <input type="number" class="form-control form-control-sm" style="width:6rem;" @bind="Field.CharLimit" min="1" placeholder="Max" />
                 </div>
+            </div>
+        }
+
+        @if (Field.FieldType == "statictext")
+        {
+            <div class="mb-3">
+                <label class="form-label">Text</label>
+                <textarea class="form-control" @bind="Field.Label" placeholder="Enter text"></textarea>
             </div>
         }
 
@@ -144,7 +148,7 @@
             </div>
         }
 
-        @if (Field.FieldType != "title" && Field.FieldType != "section" && Field.FieldType != "image")
+        @if (Field.FieldType != "title" && Field.FieldType != "section" && Field.FieldType != "image" && Field.FieldType != "statictext")
         {
             <div class="form-check mt-3">
                 <input class="form-check-input" type="checkbox" @bind="Field.IsRequired" />
@@ -188,6 +192,7 @@
         "section" => "Section",
         "file" => "Upload File",
         "image" => "Image",
+        "statictext" => "Text",
         _ => type
     };
 
@@ -294,8 +299,8 @@
             var result = await response.Content.ReadFromJsonAsync<UploadResult>();
             Field.ImageUrl = result?.filePath ?? string.Empty;
             var baseName = Path.GetFileNameWithoutExtension(file.Name);
-            Field.Label = baseName;
             Field.Key = baseName.Replace(" ", "_").ToLowerInvariant();
+            Field.Label = string.Empty;
             Field.ImageWidth = null;
             Field.ImageHeight = null;
             imageResizeInit = false;

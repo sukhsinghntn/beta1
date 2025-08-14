@@ -43,13 +43,16 @@ else
             {
                 <div class="col-12 col-md-@(12 / (rowGroup.Count() == 0 ? 1 : rowGroup.Count()))">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            @fld.Label
-                            @if (fld.IsRequired)
-                            {
-                                <span class="text-danger"> *</span>
-                            }
-                        </label>
+                        @if (fld.FieldType != "title" && fld.FieldType != "section" && fld.FieldType != "image" && fld.FieldType != "statictext")
+                        {
+                            <label class="form-label fw-semibold">
+                                @fld.Label
+                                @if (fld.IsRequired)
+                                {
+                                    <span class="text-danger"> *</span>
+                                }
+                            </label>
+                        }
 
                 @switch (fld.FieldType)
                 {
@@ -168,6 +171,9 @@ else
                             <img src="/@fld.ImageUrl" style="@GetImageStyle(fld)" />
                         }
                         break;
+                    case "statictext":
+                        <p>@fld.Label</p>
+                        break;
 
                     case "title":
                         <h4>@fld.Label</h4>
@@ -284,7 +290,7 @@ else
 
             foreach (var fld in form.Fields)
             {
-                if (fld.FieldType == "section" || fld.FieldType == "title")
+                if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image" || fld.FieldType == "statictext")
                 {
                     continue;
                 }
@@ -449,6 +455,9 @@ else
     {
         foreach (var fld in form.Fields)
         {
+            if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image" || fld.FieldType == "statictext")
+                continue;
+
             if (fld.FieldType == "text" || fld.FieldType == "textarea")
             {
                 if (responseData.TryGetValue(fld.Key, out var valObj) && valObj is string s)
@@ -477,10 +486,7 @@ else
                 }
             }
 
-            if (!fld.IsRequired)
-                continue;
-
-            if (!responseData.TryGetValue(fld.Key, out var val) || IsEmpty(val))
+            if (fld.IsRequired && (!responseData.TryGetValue(fld.Key, out var val) || IsEmpty(val)))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
@@ -498,7 +504,8 @@ else
                     f.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) &&
                     f.FieldType != "section" &&
                     f.FieldType != "title" &&
-                    f.FieldType != "image"))
+                    f.FieldType != "image" &&
+                    f.FieldType != "statictext"))
             .ToDictionary(k => k.Key, v => v.Value);
 
         await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);

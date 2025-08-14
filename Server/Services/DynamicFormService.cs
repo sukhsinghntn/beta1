@@ -131,7 +131,7 @@ namespace DynamicFormsApp.Server.Services
                     };
                     existing.Fields.Add(newField);
 
-                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image")
+                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image" && newField.FieldType != "statictext")
                     {
                         sb.Append($", [{newField.Key}] {MapToSqlType(newField.FieldType)} {(newField.IsRequired ? "NOT NULL" : "NULL")}");
                     }
@@ -217,7 +217,7 @@ namespace DynamicFormsApp.Server.Services
 
                     var rawName = SanitizeKey(existing.Name);
                     var tableName = $"Form_{existing.Id}_{rawName}";
-                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image")
+                    if (newField.FieldType != "section" && newField.FieldType != "title" && newField.FieldType != "image" && newField.FieldType != "statictext")
                     {
                         var sqlType = MapToSqlType(newField.FieldType);
                         var sql = $"ALTER TABLE [{tableName}] ADD [{newField.Key}] {sqlType} NULL;";
@@ -284,7 +284,7 @@ namespace DynamicFormsApp.Server.Services
 
             foreach (var fld in form.Fields)
             {
-                if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image")
+                if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image" || fld.FieldType == "statictext")
                     continue;
                 sb.Append($", [{fld.Key}] {MapToSqlType(fld.FieldType)} {(fld.IsRequired ? "NOT NULL" : "NULL")}");
             }
@@ -315,7 +315,7 @@ namespace DynamicFormsApp.Server.Services
             var tableName = $"Form_{formId}_{rawName}";
 
             var validFields = form.Fields
-                .Where(f => f.FieldType != "section" && f.FieldType != "title" && f.FieldType != "image")
+                .Where(f => f.FieldType != "section" && f.FieldType != "title" && f.FieldType != "image" && f.FieldType != "statictext")
                 .Select(f => f.Key)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
