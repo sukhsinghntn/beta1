@@ -215,6 +215,14 @@ else
                 builder.CloseElement();
             }
         }
+        else if (field.FieldType == "image")
+        {
+            if (!string.IsNullOrWhiteSpace(field.ImageUrl))
+            {
+                var style = $"max-width:100%;{(field.ImageWidth.HasValue ? $"width:{field.ImageWidth}px;" : string.Empty)}{(field.ImageHeight.HasValue ? $"height:{field.ImageHeight}px;" : string.Empty)}";
+                builder.AddMarkupContent(10, $"<img src='/{field.ImageUrl}' style='{style}' />");
+            }
+        }
         else if (field.FieldType == "checkbox")
         {
             if (!string.IsNullOrWhiteSpace(val))
@@ -264,6 +272,11 @@ else
             }
             return val;
         }
+        if (field.FieldType == "image")
+        {
+            return string.Empty;
+        }
+
         return val;
     }
 
