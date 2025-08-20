@@ -113,8 +113,8 @@ else
                                     <input type="text" class="form-control me-1"
                                            placeholder="@mtOptions[colIdx]"
                                            value="@mtRows[rowIdx][colIdx]"
-                                           @onchange="e => OnMultiTextChanged(fld.Key, rowIdx, colIdx, e, mtOptions.Count)" />
-                                }
+                                           @oninput="e => OnMultiTextChanged(fld.Key, rowIdx, colIdx, e, mtOptions.Count)" />
+                                    }
                                 @if (mtRows.Count > 1 && rowIdx < mtRows.Count - 1)
                                 {
                                     <button type="button" class="btn btn-outline-danger btn-sm"
