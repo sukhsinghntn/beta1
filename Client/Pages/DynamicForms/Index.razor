@@ -65,7 +65,7 @@
                 <div class="draggable-field" draggable="true" data-type="location"><span class="material-icons me-1">location_on</span> Location Dropdown</div>
             </div>
         </div>
-        <div class="col-md-9">
+        <div class="col">
             <div class="mb-4">
                 <label class="form-label">Form Name</label>
                 <input class="form-control form-control-lg" placeholder="Enter your form title" @bind="formName" />
@@ -171,18 +171,7 @@
 }
 else
 {
-    <div class="row">
-        <div class="col-md-3" style="position:sticky;top:75px;max-height:calc(100vh - 90px);overflow-y:auto;">
-            <div class="mb-3">
-                <h5 class="mb-0">Toolbox</h5>
-            </div>
-        </div>
-        <div class="col-md-9">
-            <div class="card p-3 shadow-sm">
-                <LivePreview Sections="sections" FormName="@formName" />
-            </div>
-        </div>
-    </div>
+    <LivePreview Sections="sections" FormName="@formName" />
 }
 
 @code {

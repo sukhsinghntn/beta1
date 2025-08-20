@@ -208,9 +208,9 @@ else
 
                     case "multitext":
                         var mtOpts = JsonSerializer.Deserialize<GridOptions>(fld.OptionsJson ?? "{}") ?? new GridOptions();
-                        var rows = responseData[fld.Key] as List<List<string>> ?? new();
-                        if (rows.Count == 0 || rows.Last().Any(c => !string.IsNullOrWhiteSpace(c)))
-                            rows.Add(Enumerable.Repeat(string.Empty, mtOpts.Columns.Count).ToList());
+                        var rows = responseData[fld.Key] as List<MultiTextRow> ?? new();
+                        if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+                            rows.Add(new MultiTextRow { Key = $"row{rows.Count + 1}", Values = Enumerable.Repeat(string.Empty, mtOpts.Columns.Count).ToList() });
                         responseData[fld.Key] = rows;
                         <table class="table table-bordered table-sm">
                             <thead>
@@ -229,7 +229,7 @@ else
                                         @for (int c = 0; c < mtOpts.Columns.Count; c++)
                                         {
                                             <td>
-                                                <input class="form-control form-control-sm" value="@rows[r][c]" @onchange="e => OnMultiTextChanged(fld.Key, r, c, e)" />
+                                                <input class="form-control form-control-sm" value="@rows[r].Values[c]" @onchange="e => OnMultiTextChanged(fld.Key, r, c, e)" />
                                             </td>
                                         }
                                         <td>
@@ -383,7 +383,7 @@ else
                     "checkbox" => new List<string>(),
                     "grid_radio" => new Dictionary<string, string>(),
                     "grid_checkbox" => new Dictionary<string, List<string>>(),
-                    "multitext" => new List<List<string>>(),
+                    "multitext" => new List<MultiTextRow>(),
                     "number" => (object?)null,
                     "date" => (object?)null,
                     "time" => (object?)null,
@@ -547,24 +547,32 @@ else
 
     void OnMultiTextChanged(string key, int row, int col, ChangeEventArgs e)
     {
-        if (responseData[key] is List<List<string>> rows)
+        if (responseData[key] is List<MultiTextRow> rows)
         {
-            rows[row][col] = e.Value?.ToString() ?? string.Empty;
-            if (row == rows.Count - 1 && rows[row].Any(c => !string.IsNullOrWhiteSpace(c)))
+            rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+            if (row == rows.Count - 1 && rows[row].Values.Any(c => !string.IsNullOrWhiteSpace(c)))
             {
-                rows.Add(Enumerable.Repeat(string.Empty, rows[row].Count).ToList());
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
+                });
             }
         }
     }
 
     void RemoveMultiTextRow(string key, int index)
     {
-        if (responseData[key] is List<List<string>> rows && rows.Count > 1 && index >= 0 && index < rows.Count)
+        if (responseData[key] is List<MultiTextRow> rows && rows.Count > 1 && index >= 0 && index < rows.Count)
         {
             rows.RemoveAt(index);
-            if (rows.Count == 0 || rows.Last().Any(c => !string.IsNullOrWhiteSpace(c)))
+            if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
             {
-                rows.Add(Enumerable.Repeat(string.Empty, rows.FirstOrDefault()?.Count ?? 0).ToList());
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows.FirstOrDefault()?.Values.Count ?? 0).ToList()
+                });
             }
         }
     }
@@ -667,10 +675,10 @@ else
             {
                 switch (v.Value)
                 {
-                    case List<List<string>> mt:
-                        var rows = mt
-                            .Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c)))
-                            .Select((r, i) => new { key = $"row{i + 1}", values = r })
+                    case List<MultiTextRow> mtRows:
+                        var rows = mtRows
+                            .Where(r => r.Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+                            .Select(r => new { r.Key, values = r.Values })
                             .ToList();
                         return (object)JsonSerializer.Serialize(rows);
                     case Dictionary<string, string> dr:
@@ -692,8 +700,8 @@ else
         if (value == null) return true;
         if (value is string s) return string.IsNullOrWhiteSpace(s);
         if (value is IEnumerable<string> list) return !list.Any();
-        if (value is IEnumerable<IEnumerable<string>> nested)
-            return !nested.Any(r => r.Any(c => !string.IsNullOrWhiteSpace(c)));
+        if (value is IEnumerable<MultiTextRow> mtRows)
+            return !mtRows.Any(r => r.Values.Any(c => !string.IsNullOrWhiteSpace(c)));
         if (value is Dictionary<string, string> dict) return dict.Count == 0;
         if (value is Dictionary<string, List<string>> dcl) return !dcl.Any(kv => kv.Value.Any());
         return false;
@@ -703,6 +711,12 @@ else
     {
         public List<string> Rows { get; set; } = new();
         public List<string> Columns { get; set; } = new();
+    }
+
+    class MultiTextRow
+    {
+        public string Key { get; set; } = string.Empty;
+        public List<string> Values { get; set; } = new();
     }
 
     private class FileUploadResult

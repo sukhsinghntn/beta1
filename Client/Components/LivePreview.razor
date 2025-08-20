@@ -1,4 +1,6 @@
 @using DynamicFormsApp.Shared
+@using System.Linq
+@using System.Collections.Generic
 
 <h5 class="text-muted">Live Preview</h5>
 @if (!string.IsNullOrWhiteSpace(FormName))
@@ -126,6 +128,7 @@
                             </table>
                             break;
                         case "multitext":
+                            var rows = GetPreviewRows(field);
                             <table class="table table-bordered table-sm">
                                 <thead>
                                     <tr>
@@ -133,15 +136,22 @@
                                         {
                                             <th>@col</th>
                                         }
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        @foreach (var col in field.GridColumns)
-                                        {
-                                            <td><input class="form-control" /></td>
-                                        }
-                                    </tr>
+                                    @for (int r = 0; r < rows.Count; r++)
+                                    {
+                                        <tr>
+                                            @for (int c = 0; c < field.GridColumns.Count; c++)
+                                            {
+                                                <td><input class="form-control" value="@rows[r].Values[c]" @onchange="e => OnPreviewMultiTextChanged(field.Key, r, c, e)" /></td>
+                                            }
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemovePreviewRow(field.Key, r)" disabled="@(rows.Count == 1)">×</button>
+                                            </td>
+                                        </tr>
+                                    }
                                 </tbody>
                             </table>
                             break;
@@ -175,6 +185,71 @@
     [Parameter] public List<DesignerSection> Sections { get; set; } = new();
     [Parameter] public string? FormName { get; set; }
 
+    private Dictionary<string, List<MultiTextRow>> previewData = new();
+
+    List<MultiTextRow> GetPreviewRows(DesignerField field)
+    {
+        if (!previewData.TryGetValue(field.Key, out var rows))
+        {
+            rows = new List<MultiTextRow>
+            {
+                new MultiTextRow
+                {
+                    Key = "row1",
+                    Values = Enumerable.Repeat(string.Empty, field.GridColumns.Count).ToList()
+                }
+            };
+            previewData[field.Key] = rows;
+        }
+        if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+        {
+            rows.Add(new MultiTextRow
+            {
+                Key = $"row{rows.Count + 1}",
+                Values = Enumerable.Repeat(string.Empty, field.GridColumns.Count).ToList()
+            });
+        }
+        return rows;
+    }
+
+    void OnPreviewMultiTextChanged(string key, int row, int col, ChangeEventArgs e)
+    {
+        if (previewData.TryGetValue(key, out var rows))
+        {
+            rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+            if (row == rows.Count - 1 && rows[row].Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
+                });
+            }
+        }
+    }
+
+    void RemovePreviewRow(string key, int index)
+    {
+        if (previewData.TryGetValue(key, out var rows) && rows.Count > 1 && index >= 0 && index < rows.Count)
+        {
+            rows.RemoveAt(index);
+            if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows.FirstOrDefault()?.Values.Count ?? 0).ToList()
+                });
+            }
+        }
+    }
+
     string GetImageStyle(DesignerField f) =>
         $"max-width:100%;{(f.ImageWidth.HasValue ? $"width:{f.ImageWidth}px;" : string.Empty)}{(f.ImageHeight.HasValue ? $"height:{f.ImageHeight}px;" : string.Empty)}";
+
+    class MultiTextRow
+    {
+        public string Key { get; set; } = string.Empty;
+        public List<string> Values { get; set; } = new();
+    }
 }
