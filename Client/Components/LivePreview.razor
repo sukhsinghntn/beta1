@@ -237,15 +237,6 @@
             }
 
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
-
-            if (row == rows.Count - 1 && rows[row].Values.Any(c => !string.IsNullOrWhiteSpace(c)))
-            {
-                rows.Add(new MultiTextRow
-                {
-                    Key = $"row{rows.Count + 1}",
-                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
-                });
-            }
         }
     }
 
@@ -254,22 +245,9 @@
         if (previewData.TryGetValue(key, out var rows) && index >= 0 && index < rows.Count)
         {
             rows.RemoveAt(index);
-            if (rows.Count == 0)
+            for (int i = 0; i < rows.Count; i++)
             {
-                rows.Add(new MultiTextRow
-                {
-                    Key = "row1",
-                    Values = new List<string>()
-                });
-            }
-
-            if (rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
-            {
-                rows.Add(new MultiTextRow
-                {
-                    Key = $"row{rows.Count + 1}",
-                    Values = Enumerable.Repeat(string.Empty, rows.First().Values.Count).ToList()
-                });
+                rows[i].Key = $"row{i + 1}";
             }
         }
     }
