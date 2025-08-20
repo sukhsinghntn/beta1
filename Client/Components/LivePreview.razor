@@ -203,7 +203,7 @@
                 r.Values = r.Values.Take(field.GridColumns.Count).ToList();
         }
 
-        if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+        if (rows.Count == 0 || rows.Last().Values.All(c => !string.IsNullOrWhiteSpace(c)))
         {
             rows.Add(new MultiTextRow
             {
@@ -237,6 +237,18 @@
             }
 
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(rows[row].Key))
+                rows[row].Key = $"row{row + 1}";
+
+            if (row == rows.Count - 1 && rows[row].Values.All(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
+                });
+            }
         }
     }
 
@@ -249,6 +261,7 @@
             {
                 rows[i].Key = $"row{i + 1}";
             }
+            StateHasChanged();
         }
     }
 

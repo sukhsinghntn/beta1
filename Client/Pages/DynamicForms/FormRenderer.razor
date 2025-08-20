@@ -222,7 +222,7 @@ else
                                 row.Values = row.Values.Take(mtOpts.Columns.Count).ToList();
                         }
 
-                        if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+                        if (rows.Count == 0 || rows.Last().Values.All(c => !string.IsNullOrWhiteSpace(c)))
                         {
                             rows.Add(new MultiTextRow
                             {
@@ -585,6 +585,18 @@ else
             }
 
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(rows[row].Key))
+                rows[row].Key = $"row{row + 1}";
+
+            if (row == rows.Count - 1 && rows[row].Values.All(v => !string.IsNullOrWhiteSpace(v)))
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
+                });
+            }
         }
     }
 
@@ -597,6 +609,7 @@ else
             {
                 rows[i].Key = $"row{i + 1}";
             }
+            StateHasChanged();
         }
     }
 
@@ -701,8 +714,9 @@ else
                     case List<MultiTextRow> mtRows:
                         var rows = mtRows
                             .Where(r => r.Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+                            .Select((r, idx) => new { Key = string.IsNullOrWhiteSpace(r.Key) ? $"row{idx + 1}" : r.Key, r.Values })
                             .ToDictionary(r => r.Key, r => r.Values);
-                        return rows;
+                        return JsonSerializer.Serialize(rows);
                     case Dictionary<string, string> dr:
                         return JsonSerializer.Serialize(dr);
                     case Dictionary<string, List<string>> dcl:

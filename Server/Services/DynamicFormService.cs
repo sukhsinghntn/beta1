@@ -356,6 +356,14 @@ namespace DynamicFormsApp.Server.Services
                 {
                     raw = JsonSerializer.Serialize(nestedList);
                 }
+                else if (raw is Dictionary<string, string> dict)
+                {
+                    raw = JsonSerializer.Serialize(dict);
+                }
+                else if (raw is Dictionary<string, List<string>> dictList)
+                {
+                    raw = JsonSerializer.Serialize(dictList);
+                }
 
                 sqlParams.Add(new SqlParameter($"@p{idx}", raw ?? DBNull.Value));
                 idx++;
