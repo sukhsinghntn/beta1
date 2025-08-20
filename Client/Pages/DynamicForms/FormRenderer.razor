@@ -341,13 +341,24 @@ else
             rows = new List<List<string>>();
             responseData[key] = rows;
         }
-        EnsureBlankRow(rows, columns);
+        if (rows.Count == 0)
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+        EnsureSingleBlankRow(rows, columns);
         return rows;
     }
 
-    void EnsureBlankRow(List<List<string>> rows, int columns)
+    void EnsureSingleBlankRow(List<List<string>> rows, int columns)
     {
-        if (rows.Count == 0 || rows[^1].Any(v => !string.IsNullOrWhiteSpace(v)))
+        if (rows.Count == 0)
+        {
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+            return;
+        }
+
+        while (rows.Count > 1 && rows[^1].All(string.IsNullOrWhiteSpace) && rows[^2].All(string.IsNullOrWhiteSpace))
+            rows.RemoveAt(rows.Count - 1);
+
+        if (rows[^1].Any(v => !string.IsNullOrWhiteSpace(v)))
             rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
     }
 
@@ -454,7 +465,8 @@ else
         while (row.Count <= colIdx)
             row.Add(string.Empty);
         row[colIdx] = e.Value?.ToString() ?? string.Empty;
-        EnsureBlankRow(rows, columns);
+
+        EnsureSingleBlankRow(rows, columns);
     }
 
     void RemoveMultiTextRow(string key, int rowIdx, int columns)
@@ -463,7 +475,7 @@ else
             return;
         if (rowIdx < rows.Count)
             rows.RemoveAt(rowIdx);
-        EnsureBlankRow(rows, columns);
+        EnsureSingleBlankRow(rows, columns);
     }
 
     void OnCheckboxChanged(string key, string option, ChangeEventArgs e)
