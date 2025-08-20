@@ -36,7 +36,7 @@
             </div>
         }
 
-        @if (Field.FieldType is "radio" or "checkbox" or "dropdown")
+        @if (Field.FieldType is "radio" or "checkbox" or "dropdown" or "multi_text")
         {
             <label class="form-label mt-3">Options</label>
             <div @ref="optionsRef">
@@ -142,6 +142,7 @@
         "radio" => "Multiple Choice",
         "checkbox" => "Checkbox",
         "dropdown" => "Dropdown",
+        "multi_text" => "Multi Short Answer",
         "user" => "User Dropdown",
         "department" => "Department Dropdown",
         "location" => "Location Dropdown",

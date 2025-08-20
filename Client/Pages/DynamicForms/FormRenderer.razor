@@ -101,6 +101,17 @@ else
                             }
                         </select>
                         break;
+                    case "multi_text":
+                        var mtOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]");
+                        for (int idx = 0; idx < mtOptions.Count; idx++)
+                        {
+                            var ph = mtOptions[idx];
+                            <input type="text" class="form-control mb-2"
+                                   placeholder="@ph"
+                                   value="@GetMultiTextValue(fld.Key, idx)"
+                                   @onchange="e => OnMultiTextChanged(fld.Key, idx, e)" />
+                        }
+                        break;
 
                     case "user":
                         <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
@@ -280,16 +291,24 @@ else
                     continue;
                 }
 
-                responseData[fld.Key] = fld.FieldType switch
+                if (fld.FieldType == "multi_text")
                 {
-                    "checkbox" => new List<string>(),
-                    "number" => (object?)null,
-                    "date" => (object?)null,
-                    "time" => (object?)null,
-                    "datetime" => (object?)null,
-                    "file" => "",
-                    _ => string.Empty
-                };
+                    var opts = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]") ?? new();
+                    responseData[fld.Key] = Enumerable.Repeat(string.Empty, opts.Count).ToList();
+                }
+                else
+                {
+                    responseData[fld.Key] = fld.FieldType switch
+                    {
+                        "checkbox" => new List<string>(),
+                        "number" => (object?)null,
+                        "date" => (object?)null,
+                        "time" => (object?)null,
+                        "datetime" => (object?)null,
+                        "file" => "",
+                        _ => string.Empty
+                    };
+                }
             }
 
             StateHasChanged();
@@ -301,6 +320,12 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+    string GetMultiTextValue(string key, int index)
+    {
+        if (responseData.TryGetValue(key, out var obj) && obj is List<string> list && index < list.Count)
+            return list[index];
+        return string.Empty;
+    }
 
     string? GetInstructions(FormField field)
     {
@@ -394,6 +419,18 @@ else
             responseData[key] = dt;
         else
             responseData[key] = null;
+    }
+
+    void OnMultiTextChanged(string key, int index, ChangeEventArgs e)
+    {
+        if (!responseData.TryGetValue(key, out var existing) || existing is not List<string> list)
+        {
+            list = new List<string>();
+            responseData[key] = list;
+        }
+        while (list.Count <= index)
+            list.Add(string.Empty);
+        list[index] = e.Value?.ToString() ?? string.Empty;
     }
 
     void OnCheckboxChanged(string key, string option, ChangeEventArgs e)
@@ -508,7 +545,7 @@ else
     {
         if (value == null) return true;
         if (value is string s) return string.IsNullOrWhiteSpace(s);
-        if (value is IEnumerable<string> list) return !list.Any();
+        if (value is IEnumerable<string> list) return !list.Any(v => !string.IsNullOrWhiteSpace(v));
         return false;
     }
 

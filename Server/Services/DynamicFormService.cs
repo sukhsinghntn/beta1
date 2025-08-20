@@ -624,6 +624,7 @@ namespace DynamicFormsApp.Server.Services
             "datetime" => "DATETIME2",
             "file" => "NVARCHAR(MAX)",
             "checkbox" => "NVARCHAR(MAX)",      // Store as JSON array
+            "multi_text" => "NVARCHAR(MAX)",   // JSON array of strings
             "dropdown" => "NVARCHAR(255)",
             "user" => "NVARCHAR(255)",
             "department" => "NVARCHAR(255)",

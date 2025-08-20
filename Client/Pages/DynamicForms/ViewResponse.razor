@@ -215,7 +215,7 @@ else
                 builder.CloseElement();
             }
         }
-        else if (field.FieldType == "checkbox")
+        else if (field.FieldType == "checkbox" || field.FieldType == "multi_text")
         {
             if (!string.IsNullOrWhiteSpace(val))
             {
@@ -249,7 +249,7 @@ else
         if (response == null) return string.Empty;
         response.TryGetValue(field.Key, out var valObj);
         var val = valObj?.ToString() ?? string.Empty;
-        if (field.FieldType == "checkbox")
+        if (field.FieldType == "checkbox" || field.FieldType == "multi_text")
         {
             if (!string.IsNullOrWhiteSpace(val))
             {

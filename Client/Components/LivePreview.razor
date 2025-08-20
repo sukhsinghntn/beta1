@@ -63,6 +63,12 @@
                                 }
                             </select>
                             break;
+                        case "multi_text":
+                            @foreach (var opt in field.OptionItems)
+                            {
+                                <input class="form-control mb-2" placeholder="@(!string.IsNullOrWhiteSpace(opt) ? opt : "Short answer")" disabled />
+                            }
+                            break;
                         case "user":
                             <select class="form-select" disabled>
                                 <option>Select user</option>

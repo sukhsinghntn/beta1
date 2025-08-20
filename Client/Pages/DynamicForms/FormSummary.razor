@@ -45,7 +45,7 @@ else
                     <p>No numeric data.</p>
                 }
             }
-            else if (field.FieldType is "dropdown" or "radio" or "checkbox")
+            else if (field.FieldType is "dropdown" or "radio" or "checkbox" or "multi_text")
             {
                 var allValues = responses.SelectMany(r => ExtractOptions(r, field)).ToList();
                 var grouped = allValues.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
@@ -135,7 +135,7 @@ else
         if (!row.TryGetValue(field.Key, out var val) || val is null)
             return Enumerable.Empty<string>();
 
-        if (field.FieldType == "checkbox")
+        if (field.FieldType == "checkbox" || field.FieldType == "multi_text")
         {
             if (val is JsonElement je && je.ValueKind == JsonValueKind.Array)
             {
