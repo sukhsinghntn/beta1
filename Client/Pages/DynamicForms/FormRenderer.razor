@@ -222,11 +222,10 @@ else
                                 row.Values = row.Values.Take(mtOpts.Columns.Count).ToList();
                         }
 
-                        if (rows.Count == 0 || rows.Last().Values.All(c => !string.IsNullOrWhiteSpace(c)))
+                        if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
                         {
                             rows.Add(new MultiTextRow
                             {
-                                Key = $"row{rows.Count + 1}",
                                 Values = Enumerable.Repeat(string.Empty, mtOpts.Columns.Count).ToList()
                             });
                         }
@@ -574,7 +573,6 @@ else
             {
                 rows.Add(new MultiTextRow
                 {
-                    Key = $"row{rows.Count + 1}",
                     Values = Enumerable.Repeat(string.Empty, col + 1).ToList()
                 });
             }
@@ -585,9 +583,6 @@ else
             }
 
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(rows[row].Key))
-                rows[row].Key = $"row{row + 1}";
 
             NormalizeMultiTextRows(rows, rows[row].Values.Count);
         }
@@ -623,14 +618,8 @@ else
         {
             rows.Add(new MultiTextRow
             {
-                Key = $"row{rows.Count + 1}",
                 Values = Enumerable.Repeat(string.Empty, cols).ToList()
             });
-        }
-
-        for (int i = 0; i < rows.Count; i++)
-        {
-            rows[i].Key = $"row{i + 1}";
         }
     }
 
@@ -735,8 +724,8 @@ else
                     case List<MultiTextRow> mtRows:
                         var rows = mtRows
                             .Where(r => r.Values.Any(c => !string.IsNullOrWhiteSpace(c)))
-                            .Select((r, idx) => new { Key = string.IsNullOrWhiteSpace(r.Key) ? $"row{idx + 1}" : r.Key, r.Values })
-                            .ToDictionary(r => r.Key, r => r.Values);
+                            .Select(r => r.Values)
+                            .ToList();
                         return rows;
                     case Dictionary<string, string> dr:
                         return JsonSerializer.Serialize(dr);
@@ -772,7 +761,6 @@ else
 
     class MultiTextRow
     {
-        public string Key { get; set; } = string.Empty;
         public List<string> Values { get; set; } = new();
     }
 

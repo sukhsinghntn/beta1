@@ -211,7 +211,6 @@
             {
                 rows.Add(new MultiTextRow
                 {
-                    Key = $"row{rows.Count + 1}",
                     Values = Enumerable.Repeat(string.Empty, col + 1).ToList()
                 });
             }
@@ -222,9 +221,6 @@
             }
 
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(rows[row].Key))
-                rows[row].Key = $"row{row + 1}";
 
             NormalizePreviewRows(rows, rows[row].Values.Count);
         }
@@ -260,14 +256,8 @@
         {
             rows.Add(new MultiTextRow
             {
-                Key = $"row{rows.Count + 1}",
                 Values = Enumerable.Repeat(string.Empty, cols).ToList()
             });
-        }
-
-        for (int i = 0; i < rows.Count; i++)
-        {
-            rows[i].Key = $"row{i + 1}";
         }
     }
 
@@ -276,7 +266,6 @@
 
     class MultiTextRow
     {
-        public string Key { get; set; } = string.Empty;
         public List<string> Values { get; set; } = new();
     }
 }
