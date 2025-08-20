@@ -64,9 +64,14 @@
                             </select>
                             break;
                         case "multi_text":
-                            @foreach (var opt in field.OptionItems)
+                            @for (int r = 0; r < 2; r++)
                             {
-                                <input class="form-control mb-2" placeholder="@(!string.IsNullOrWhiteSpace(opt) ? opt : "Short answer")" disabled />
+                                <div class="d-flex mb-2">
+                                    @foreach (var opt in field.OptionItems)
+                                    {
+                                        <input class="form-control me-1" placeholder="@(!string.IsNullOrWhiteSpace(opt) ? opt : "Short answer")" disabled />
+                                    }
+                                </div>
                             }
                             break;
                         case "user":

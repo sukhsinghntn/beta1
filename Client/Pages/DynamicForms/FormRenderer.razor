@@ -102,14 +102,25 @@ else
                         </select>
                         break;
                     case "multi_text":
-                        var mtOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]");
-                        for (int idx = 0; idx < mtOptions.Count; idx++)
+                        var mtOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]") ?? new();
+        
+                        var mtRows = GetMultiTextRows(fld.Key, mtOptions.Count);
+                        for (int rowIdx = 0; rowIdx < mtRows.Count; rowIdx++)
                         {
-                            var ph = mtOptions[idx];
-                            <input type="text" class="form-control mb-2"
-                                   placeholder="@ph"
-                                   value="@GetMultiTextValue(fld.Key, idx)"
-                                   @onchange="e => OnMultiTextChanged(fld.Key, idx, e)" />
+                            <div class="d-flex mb-2">
+                                @for (int colIdx = 0; colIdx < mtOptions.Count; colIdx++)
+                                {
+                                    <input type="text" class="form-control me-1"
+                                           placeholder="@mtOptions[colIdx]"
+                                           value="@mtRows[rowIdx][colIdx]"
+                                           @onchange="e => OnMultiTextChanged(fld.Key, rowIdx, colIdx, e, mtOptions.Count)" />
+                                }
+                                @if (mtRows.Count > 1 && rowIdx < mtRows.Count - 1)
+                                {
+                                    <button type="button" class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => RemoveMultiTextRow(fld.Key, rowIdx, mtOptions.Count)">x</button>
+                                }
+                            </div>
                         }
                         break;
 
@@ -294,7 +305,10 @@ else
                 if (fld.FieldType == "multi_text")
                 {
                     var opts = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]") ?? new();
-                    responseData[fld.Key] = Enumerable.Repeat(string.Empty, opts.Count).ToList();
+                    responseData[fld.Key] = new List<List<string>>
+                    {
+                        Enumerable.Repeat(string.Empty, opts.Count).ToList()
+                    };
                 }
                 else
                 {
@@ -320,11 +334,21 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
-    string GetMultiTextValue(string key, int index)
+    List<List<string>> GetMultiTextRows(string key, int columns)
     {
-        if (responseData.TryGetValue(key, out var obj) && obj is List<string> list && index < list.Count)
-            return list[index];
-        return string.Empty;
+        if (!responseData.TryGetValue(key, out var obj) || obj is not List<List<string>> rows)
+        {
+            rows = new List<List<string>>();
+            responseData[key] = rows;
+        }
+        EnsureBlankRow(rows, columns);
+        return rows;
+    }
+
+    void EnsureBlankRow(List<List<string>> rows, int columns)
+    {
+        if (rows.Count == 0 || rows[^1].Any(v => !string.IsNullOrWhiteSpace(v)))
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
     }
 
     string? GetInstructions(FormField field)
@@ -421,16 +445,25 @@ else
             responseData[key] = null;
     }
 
-    void OnMultiTextChanged(string key, int index, ChangeEventArgs e)
+    void OnMultiTextChanged(string key, int rowIdx, int colIdx, ChangeEventArgs e, int columns)
     {
-        if (!responseData.TryGetValue(key, out var existing) || existing is not List<string> list)
-        {
-            list = new List<string>();
-            responseData[key] = list;
-        }
-        while (list.Count <= index)
-            list.Add(string.Empty);
-        list[index] = e.Value?.ToString() ?? string.Empty;
+        var rows = GetMultiTextRows(key, columns);
+        while (rows.Count <= rowIdx)
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+        var row = rows[rowIdx];
+        while (row.Count <= colIdx)
+            row.Add(string.Empty);
+        row[colIdx] = e.Value?.ToString() ?? string.Empty;
+        EnsureBlankRow(rows, columns);
+    }
+
+    void RemoveMultiTextRow(string key, int rowIdx, int columns)
+    {
+        if (!responseData.TryGetValue(key, out var obj) || obj is not List<List<string>> rows)
+            return;
+        if (rowIdx < rows.Count)
+            rows.RemoveAt(rowIdx);
+        EnsureBlankRow(rows, columns);
     }
 
     void OnCheckboxChanged(string key, string option, ChangeEventArgs e)
@@ -528,6 +561,16 @@ else
                     f.FieldType != "title"))
             .ToDictionary(k => k.Key, v => v.Value);
 
+        foreach (var key in submitData.Keys.ToList())
+        {
+            if (submitData[key] is List<List<string>> rows)
+            {
+                submitData[key] = rows
+                    .Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c)))
+                    .ToList();
+            }
+        }
+
         await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
 
         var user = await CookieHelper.LoginStatus();
@@ -546,6 +589,8 @@ else
         if (value == null) return true;
         if (value is string s) return string.IsNullOrWhiteSpace(s);
         if (value is IEnumerable<string> list) return !list.Any(v => !string.IsNullOrWhiteSpace(v));
+        if (value is IEnumerable<IEnumerable<string>> matrix)
+            return !matrix.Any(r => r.Any(c => !string.IsNullOrWhiteSpace(c)));
         return false;
     }
 

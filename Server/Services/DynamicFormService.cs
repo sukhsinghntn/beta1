@@ -264,6 +264,10 @@ namespace DynamicFormsApp.Server.Services
                 {
                     raw = JsonSerializer.Serialize(stringList);
                 }
+                else if (raw is List<List<string>> listList)
+                {
+                    raw = JsonSerializer.Serialize(listList);
+                }
 
                 sqlParams.Add(new SqlParameter($"@p{idx}", raw ?? DBNull.Value));
                 idx++;
@@ -624,7 +628,7 @@ namespace DynamicFormsApp.Server.Services
             "datetime" => "DATETIME2",
             "file" => "NVARCHAR(MAX)",
             "checkbox" => "NVARCHAR(MAX)",      // Store as JSON array
-            "multi_text" => "NVARCHAR(MAX)",   // JSON array of strings
+            "multi_text" => "NVARCHAR(MAX)",   // JSON array of arrays of strings
             "dropdown" => "NVARCHAR(255)",
             "user" => "NVARCHAR(255)",
             "department" => "NVARCHAR(255)",

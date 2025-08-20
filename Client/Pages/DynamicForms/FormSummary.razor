@@ -139,12 +139,33 @@ else
         {
             if (val is JsonElement je && je.ValueKind == JsonValueKind.Array)
             {
+                if (field.FieldType == "multi_text")
+                    return je.EnumerateArray().SelectMany(r => r.EnumerateArray().Select(e => e.GetString())
+                        .Where(v => !string.IsNullOrWhiteSpace(v)));
                 return je.EnumerateArray().Select(e => e.GetString()).Where(v => !string.IsNullOrWhiteSpace(v));
+            }
+            else if (val is string s)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(s);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        if (field.FieldType == "multi_text")
+                            return doc.RootElement.EnumerateArray()
+                                .SelectMany(r => r.EnumerateArray().Select(e => e.GetString())
+                                .Where(v => !string.IsNullOrWhiteSpace(v)));
+                        return doc.RootElement.EnumerateArray()
+                            .Select(e => e.GetString()).Where(v => !string.IsNullOrWhiteSpace(v));
+                    }
+                }
+                catch { }
             }
             else if (val is IEnumerable<string> strList)
             {
                 return strList;
             }
+            return Enumerable.Empty<string>();
         }
 
         return new[] { val.ToString() };
