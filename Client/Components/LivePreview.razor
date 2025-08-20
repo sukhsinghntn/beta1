@@ -195,22 +195,7 @@
             previewData[field.Key] = rows;
         }
 
-        foreach (var r in rows)
-        {
-            while (r.Values.Count < field.GridColumns.Count)
-                r.Values.Add(string.Empty);
-            if (r.Values.Count > field.GridColumns.Count)
-                r.Values = r.Values.Take(field.GridColumns.Count).ToList();
-        }
-
-        if (rows.Count == 0 || rows.Last().Values.All(c => !string.IsNullOrWhiteSpace(c)))
-        {
-            rows.Add(new MultiTextRow
-            {
-                Key = $"row{rows.Count + 1}",
-                Values = Enumerable.Repeat(string.Empty, field.GridColumns.Count).ToList()
-            });
-        }
+        NormalizePreviewRows(rows, field.GridColumns.Count);
 
         return rows;
     }
@@ -241,14 +226,7 @@
             if (string.IsNullOrWhiteSpace(rows[row].Key))
                 rows[row].Key = $"row{row + 1}";
 
-            if (row == rows.Count - 1 && rows[row].Values.All(v => !string.IsNullOrWhiteSpace(v)))
-            {
-                rows.Add(new MultiTextRow
-                {
-                    Key = $"row{rows.Count + 1}",
-                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
-                });
-            }
+            NormalizePreviewRows(rows, rows[row].Values.Count);
         }
     }
 
@@ -257,11 +235,39 @@
         if (previewData.TryGetValue(key, out var rows) && index >= 0 && index < rows.Count)
         {
             rows.RemoveAt(index);
-            for (int i = 0; i < rows.Count; i++)
-            {
-                rows[i].Key = $"row{i + 1}";
-            }
+            NormalizePreviewRows(rows, rows.FirstOrDefault()?.Values.Count ?? 0);
             StateHasChanged();
+        }
+    }
+
+    void NormalizePreviewRows(List<MultiTextRow> rows, int cols)
+    {
+        foreach (var r in rows)
+        {
+            while (r.Values.Count < cols)
+                r.Values.Add(string.Empty);
+            if (r.Values.Count > cols)
+                r.Values = r.Values.Take(cols).ToList();
+        }
+
+        for (int i = rows.Count - 2; i >= 0; i--)
+        {
+            if (rows[i].Values.All(v => string.IsNullOrWhiteSpace(v)))
+                rows.RemoveAt(i);
+        }
+
+        if (rows.Count == 0 || rows.Last().Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+        {
+            rows.Add(new MultiTextRow
+            {
+                Key = $"row{rows.Count + 1}",
+                Values = Enumerable.Repeat(string.Empty, cols).ToList()
+            });
+        }
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            rows[i].Key = $"row{i + 1}";
         }
     }
 

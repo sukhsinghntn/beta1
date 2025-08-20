@@ -589,14 +589,7 @@ else
             if (string.IsNullOrWhiteSpace(rows[row].Key))
                 rows[row].Key = $"row{row + 1}";
 
-            if (row == rows.Count - 1 && rows[row].Values.All(v => !string.IsNullOrWhiteSpace(v)))
-            {
-                rows.Add(new MultiTextRow
-                {
-                    Key = $"row{rows.Count + 1}",
-                    Values = Enumerable.Repeat(string.Empty, rows[row].Values.Count).ToList()
-                });
-            }
+            NormalizeMultiTextRows(rows, rows[row].Values.Count);
         }
     }
 
@@ -605,11 +598,39 @@ else
         if (responseData[key] is List<MultiTextRow> rows && index >= 0 && index < rows.Count)
         {
             rows.RemoveAt(index);
-            for (int i = 0; i < rows.Count; i++)
-            {
-                rows[i].Key = $"row{i + 1}";
-            }
+            NormalizeMultiTextRows(rows, rows.FirstOrDefault()?.Values.Count ?? 0);
             StateHasChanged();
+        }
+    }
+
+    void NormalizeMultiTextRows(List<MultiTextRow> rows, int cols)
+    {
+        foreach (var r in rows)
+        {
+            while (r.Values.Count < cols)
+                r.Values.Add(string.Empty);
+            if (r.Values.Count > cols)
+                r.Values = r.Values.Take(cols).ToList();
+        }
+
+        for (int i = rows.Count - 2; i >= 0; i--)
+        {
+            if (rows[i].Values.All(v => string.IsNullOrWhiteSpace(v)))
+                rows.RemoveAt(i);
+        }
+
+        if (rows.Count == 0 || rows.Last().Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+        {
+            rows.Add(new MultiTextRow
+            {
+                Key = $"row{rows.Count + 1}",
+                Values = Enumerable.Repeat(string.Empty, cols).ToList()
+            });
+        }
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            rows[i].Key = $"row{i + 1}";
         }
     }
 
@@ -716,7 +737,7 @@ else
                             .Where(r => r.Values.Any(c => !string.IsNullOrWhiteSpace(c)))
                             .Select((r, idx) => new { Key = string.IsNullOrWhiteSpace(r.Key) ? $"row{idx + 1}" : r.Key, r.Values })
                             .ToDictionary(r => r.Key, r => r.Values);
-                        return JsonSerializer.Serialize(rows);
+                        return rows;
                     case Dictionary<string, string> dr:
                         return JsonSerializer.Serialize(dr);
                     case Dictionary<string, List<string>> dcl:
