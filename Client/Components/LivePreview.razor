@@ -191,16 +191,18 @@
     {
         if (!previewData.TryGetValue(field.Key, out var rows))
         {
-            rows = new List<MultiTextRow>
-            {
-                new MultiTextRow
-                {
-                    Key = "row1",
-                    Values = Enumerable.Repeat(string.Empty, field.GridColumns.Count).ToList()
-                }
-            };
+            rows = new List<MultiTextRow>();
             previewData[field.Key] = rows;
         }
+
+        foreach (var r in rows)
+        {
+            while (r.Values.Count < field.GridColumns.Count)
+                r.Values.Add(string.Empty);
+            if (r.Values.Count > field.GridColumns.Count)
+                r.Values = r.Values.Take(field.GridColumns.Count).ToList();
+        }
+
         if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
         {
             rows.Add(new MultiTextRow
@@ -209,6 +211,7 @@
                 Values = Enumerable.Repeat(string.Empty, field.GridColumns.Count).ToList()
             });
         }
+
         return rows;
     }
 
@@ -216,7 +219,25 @@
     {
         if (previewData.TryGetValue(key, out var rows))
         {
+            if (row < 0)
+                return;
+
+            while (rows.Count <= row)
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = $"row{rows.Count + 1}",
+                    Values = Enumerable.Repeat(string.Empty, col + 1).ToList()
+                });
+            }
+
+            while (rows[row].Values.Count <= col)
+            {
+                rows[row].Values.Add(string.Empty);
+            }
+
             rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+
             if (row == rows.Count - 1 && rows[row].Values.Any(c => !string.IsNullOrWhiteSpace(c)))
             {
                 rows.Add(new MultiTextRow
@@ -230,15 +251,24 @@
 
     void RemovePreviewRow(string key, int index)
     {
-        if (previewData.TryGetValue(key, out var rows) && rows.Count > 1 && index >= 0 && index < rows.Count)
+        if (previewData.TryGetValue(key, out var rows) && index >= 0 && index < rows.Count)
         {
             rows.RemoveAt(index);
-            if (rows.Count == 0 || rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
+            if (rows.Count == 0)
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Key = "row1",
+                    Values = new List<string>()
+                });
+            }
+
+            if (rows.Last().Values.Any(c => !string.IsNullOrWhiteSpace(c)))
             {
                 rows.Add(new MultiTextRow
                 {
                     Key = $"row{rows.Count + 1}",
-                    Values = Enumerable.Repeat(string.Empty, rows.FirstOrDefault()?.Values.Count ?? 0).ToList()
+                    Values = Enumerable.Repeat(string.Empty, rows.First().Values.Count).ToList()
                 });
             }
         }
