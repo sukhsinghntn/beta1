@@ -8,6 +8,7 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject CookieHelper CookieHelper
+@inject IUserService UserService
 
 <h3>@(!string.IsNullOrEmpty(statusMessage) || unavailableInfo != null
         ? "Form Not Available"
@@ -42,24 +43,30 @@ else
             {
                 <div class="col-12 col-md-@(12 / (rowGroup.Count() == 0 ? 1 : rowGroup.Count()))">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            @fld.Label
-                            @if (fld.IsRequired)
-                            {
-                                <span class="text-danger"> *</span>
-                            }
-                        </label>
+                        @if (fld.FieldType != "title" && fld.FieldType != "section" && fld.FieldType != "image" && fld.FieldType != "statictext")
+                        {
+                            <label class="form-label fw-semibold">
+                                @fld.Label
+                                @if (fld.IsRequired)
+                                {
+                                    <span class="text-danger"> *</span>
+                                }
+                            </label>
+                        }
 
                 @switch (fld.FieldType)
                 {
                     case "text":
                         <input type="text" class="form-control"
+                               placeholder="@fld.Placeholder"
                                value="@GetString(fld.Key)"
+                               maxlength="@fld.CharLimit"
+                               minlength="@fld.MinCharLimit"
                                @onchange="e => OnTextChanged(fld.Key, e)" />
                         break;
 
                     case "textarea":
-                        <textarea class="form-control"
+                        <textarea class="form-control" placeholder="@fld.Placeholder" maxlength="@fld.CharLimit" minlength="@fld.MinCharLimit"
                                   @onchange="e => OnTextChanged(fld.Key, e)">@GetString(fld.Key)</textarea>
                         break;
 
@@ -90,10 +97,38 @@ else
                     case "dropdown":
                         var ddOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]");
                         <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
-                            <option value="" disabled selected>Select...</option>
+                            <option value="" disabled selected>@(string.IsNullOrWhiteSpace(fld.Placeholder) ? "Select one from dropdown" : fld.Placeholder)</option>
                             @foreach (var opt in ddOptions)
                             {
                                 <option value="@opt">@opt</option>
+                            }
+                        </select>
+                        break;
+
+                    case "user":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select user...</option>
+                            @foreach (var u in directoryUsers)
+                            {
+                                <option value="@u.DisplayName">@u.DisplayName - @u.Department - @u.Location</option>
+                            }
+                        </select>
+                        break;
+                    case "department":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select department...</option>
+                            @foreach (var d in departments)
+                            {
+                                <option value="@d">@d</option>
+                            }
+                        </select>
+                        break;
+                    case "location":
+                        <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
+                            <option value="" disabled selected>Select location...</option>
+                            @foreach (var l in locations)
+                            {
+                                <option value="@l">@l</option>
                             }
                         </select>
                         break;
@@ -123,12 +158,57 @@ else
                         }
                         break;
 
+                    case "multitext":
+                        var mtOpts = JsonSerializer.Deserialize<GridOptions>(fld.OptionsJson ?? "{}") ?? new GridOptions();
+                        var rows = responseData[fld.Key] as List<List<string>> ?? new();
+                        if (rows.Count == 0)
+                            rows.Add(Enumerable.Repeat(string.Empty, mtOpts.Columns.Count).ToList());
+                        responseData[fld.Key] = rows;
+                        <table class="table table-bordered table-sm">
+                            <thead>
+                                <tr>
+                                    @foreach (var col in mtOpts.Columns)
+                                    {
+                                        <th>@col</th>
+                                    }
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int r = 0; r < rows.Count; r++)
+                                {
+                                    <tr>
+                                        @for (int c = 0; c < mtOpts.Columns.Count; c++)
+                                        {
+                                            <td>
+                                                <input class="form-control form-control-sm" value="@rows[r][c]" @onchange="e => OnMultiTextChanged(fld.Key, r, c, e)" />
+                                            </td>
+                                        }
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveMultiTextRow(fld.Key, r)" disabled="@(rows.Count == 1)">×</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-2" @onclick="() => AddMultiTextRow(fld.Key, mtOpts.Columns.Count)">Add Row</button>
+                        break;
+
                     case "file":
                         <InputFile OnChange="e => OnFileUploadChanged(fld.Key, e)" />
                         @if (responseData.ContainsKey(fld.Key))
                         {
                             <div class="form-text">Uploaded: @responseData[fld.Key]</div>
                         }
+                        break;
+                    case "image":
+                        @if (!string.IsNullOrWhiteSpace(fld.ImageUrl))
+                        {
+                            <img src="/@fld.ImageUrl" style="@GetImageStyle(fld)" />
+                        }
+                        break;
+                    case "statictext":
+                        <p>@fld.Label</p>
                         break;
 
                     case "title":
@@ -137,7 +217,14 @@ else
 
                     case "section":
                         <hr />
-                        <h5>@fld.Label</h5>
+                        @if (!string.IsNullOrWhiteSpace(fld.Label))
+                        {
+                            <h5>@fld.Label</h5>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(GetInstructions(fld)))
+                        {
+                            <p class="text-muted">@GetInstructions(fld)</p>
+                        }
                         break;
 
                     case "scale":
@@ -179,8 +266,14 @@ else
 
     private Form form;
     private Dictionary<string, object> responseData = new();
+    private List<UserModel> directoryUsers = new();
+    private List<string> departments = new();
+    private List<string> locations = new();
     private string? statusMessage;
     private DeletedFormInfo? unavailableInfo;
+
+    string GetImageStyle(FormField f) =>
+        $"max-width:100%;{(f.ImageWidth.HasValue ? $"width:{f.ImageWidth}px;" : string.Empty)}{(f.ImageHeight.HasValue ? $"height:{f.ImageHeight}px;" : string.Empty)}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -203,7 +296,25 @@ else
 
             form = await resp.Content.ReadFromJsonAsync<Form>();
 
+            if (form.Fields.Any(f => f.FieldType == "user"))
+            {
+                directoryUsers = await UserService.GetAllUsers();
+            }
+            if (form.Fields.Any(f => f.FieldType == "department"))
+            {
+                departments = await UserService.GetDepartments();
+            }
+            if (form.Fields.Any(f => f.FieldType == "location"))
+            {
+                locations = await UserService.GetLocations();
+            }
+
             var user = await CookieHelper.LoginStatus();
+            UserModel? currentUser = null;
+            if (!string.IsNullOrEmpty(user))
+            {
+                currentUser = await UserService.GetUserData(user);
+            }
             if (form.RequireLogin && string.IsNullOrEmpty(user))
             {
                 var ret = Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri));
@@ -211,11 +322,19 @@ else
                 return;
             }
 
+            form.Fields = FilterFieldsBySectionVisibility(form.Fields, currentUser);
+
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image" || fld.FieldType == "statictext")
+                {
+                    continue;
+                }
+
                 responseData[fld.Key] = fld.FieldType switch
                 {
                     "checkbox" => new List<string>(),
+                    "multitext" => new List<List<string>>(),
                     "number" => (object?)null,
                     "date" => (object?)null,
                     "time" => (object?)null,
@@ -234,6 +353,65 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+
+    string? GetInstructions(FormField field)
+    {
+        if (string.IsNullOrWhiteSpace(field.OptionsJson))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(field.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Instructions", out var instEl))
+                return instEl.GetString();
+        }
+        catch { }
+        return null;
+    }
+
+    List<FormField> FilterFieldsBySectionVisibility(IEnumerable<FormField> fields, UserModel? user)
+    {
+        if (user == null) return fields.ToList();
+        var ordered = fields.OrderBy(f => f.Row ?? 0).ThenBy(f => f.Column ?? 0).ToList();
+        var result = new List<FormField>();
+        bool sectionVisible = true;
+        foreach (var fld in ordered)
+        {
+            if (fld.FieldType == "section")
+            {
+                sectionVisible = IsSectionVisible(fld, user);
+                if (sectionVisible)
+                    result.Add(fld);
+                continue;
+            }
+            if (sectionVisible)
+                result.Add(fld);
+        }
+        return result;
+    }
+
+    bool IsSectionVisible(FormField sectionField, UserModel user)
+    {
+        if (string.IsNullOrWhiteSpace(sectionField.OptionsJson))
+            return true;
+        try
+        {
+            using var doc = JsonDocument.Parse(sectionField.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Departments", out var depEl) && depEl.ValueKind == JsonValueKind.Array)
+            {
+                var deps = depEl.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (deps.Count > 0 && !deps.Any(d => string.Equals(d, user.Department, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+            }
+            if (doc.RootElement.TryGetProperty("Locations", out var locEl) && locEl.ValueKind == JsonValueKind.Array)
+            {
+                var locs = locEl.EnumerateArray().Select(e => e.GetString()).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (locs.Count > 0 && !locs.Any(l => string.Equals(l, user.Location, StringComparison.OrdinalIgnoreCase)))
+                    return false;
+            }
+        }
+        catch { }
+        return true;
+    }
 
     void OnTextChanged(string key, ChangeEventArgs e) =>
         responseData[key] = e.Value?.ToString() ?? "";
@@ -289,13 +467,49 @@ else
         }
     }
 
+    void OnMultiTextChanged(string key, int row, int col, ChangeEventArgs e)
+    {
+        if (responseData[key] is List<List<string>> rows)
+        {
+            rows[row][col] = e.Value?.ToString() ?? string.Empty;
+        }
+    }
+
+    void AddMultiTextRow(string key, int columns)
+    {
+        if (responseData[key] is List<List<string>> rows)
+        {
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+        }
+    }
+
+    void RemoveMultiTextRow(string key, int index)
+    {
+        if (responseData[key] is List<List<string>> rows && rows.Count > 1 && index >= 0 && index < rows.Count)
+        {
+            rows.RemoveAt(index);
+        }
+    }
+
     private async Task OnFileUploadChanged(string key, InputFileChangeEventArgs e)
     {
         var file = e.File;
         if (file == null) return;
 
+        const long maxSize = 5 * 1024 * 1024;
+        if (file.Size > maxSize)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "File too large",
+                Detail = "Files must be 5 MB or smaller."
+            });
+            return;
+        }
+
         var content = new MultipartFormDataContent();
-        var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        var stream = file.OpenReadStream(maxAllowedSize: maxSize);
         content.Add(new StreamContent(stream), "file", file.Name);
 
         var response = await Http.PostAsync("api/FileUpload", content);
@@ -307,6 +521,12 @@ else
         else
         {
             responseData[key] = "upload-failed";
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Upload failed",
+                Detail = "Unable to upload file."
+            });
         }
     }
 
@@ -314,32 +534,64 @@ else
     {
         foreach (var fld in form.Fields)
         {
-            if (!fld.IsRequired)
+            if (fld.FieldType == "section" || fld.FieldType == "title" || fld.FieldType == "image" || fld.FieldType == "statictext")
                 continue;
 
-            if (!responseData.TryGetValue(fld.Key, out var val) || IsEmpty(val))
+            if (fld.FieldType == "text" || fld.FieldType == "textarea")
+            {
+                if (responseData.TryGetValue(fld.Key, out var valObj) && valObj is string s)
+                {
+                    if (fld.MinCharLimit.HasValue && s.Length < fld.MinCharLimit.Value)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Character limit",
+                            Detail = $"'{fld.Label}' requires at least {fld.MinCharLimit} characters (currently {s.Length}).",
+                        });
+                        return;
+                    }
+
+                    if (fld.CharLimit.HasValue && s.Length > fld.CharLimit.Value)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Character limit",
+                            Detail = $"'{fld.Label}' allows {fld.CharLimit} characters (currently {s.Length}).",
+                        });
+                        return;
+                    }
+                }
+            }
+
+            if (fld.IsRequired && (!responseData.TryGetValue(fld.Key, out var val) || IsEmpty(val)))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Missing answer",
-                    Detail = $"Please fill out '{fld.Label}'."
+                    Detail = $"Please fill out '{fld.Label}'.",
                 });
                 return;
             }
         }
 
-        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", responseData);
+        var submitData = responseData
+            .Where(kv =>
+                form.Fields.Any(f =>
+                    f.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) &&
+                    f.FieldType != "section" &&
+                    f.FieldType != "title" &&
+                    f.FieldType != "image" &&
+                    f.FieldType != "statictext"))
+            .ToDictionary(k => k.Key, v => v.Value is List<List<string>> mt
+                ? JsonSerializer.Serialize(mt.Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c))))
+                : v.Value);
 
-        var user = await CookieHelper.LoginStatus();
-        if (string.IsNullOrEmpty(user))
-        {
-            Navigation.NavigateTo($"/forms/{FormId}/submitted", true);
-        }
-        else
-        {
-            Navigation.NavigateTo($"/forms/{FormId}/responses");
-        }
+        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
+
+        Navigation.NavigateTo($"/forms/{FormId}/submitted", true);
     }
 
     bool IsEmpty(object value)
@@ -347,7 +599,15 @@ else
         if (value == null) return true;
         if (value is string s) return string.IsNullOrWhiteSpace(s);
         if (value is IEnumerable<string> list) return !list.Any();
+        if (value is IEnumerable<IEnumerable<string>> nested)
+            return !nested.Any(r => r.Any(c => !string.IsNullOrWhiteSpace(c)));
         return false;
+    }
+
+    class GridOptions
+    {
+        public List<string> Rows { get; set; } = new();
+        public List<string> Columns { get; set; } = new();
     }
 
     private class FileUploadResult
