@@ -1,4 +1,6 @@
-﻿@using DynamicFormsApp.Shared
+@using DynamicFormsApp.Shared
+@using System.Linq
+@using System.Collections.Generic
 
 <h5 class="text-muted">Live Preview</h5>
 @if (!string.IsNullOrWhiteSpace(FormName))
@@ -6,128 +8,264 @@
     <h3 class="mb-3">@FormName</h3>
 }
 
-@foreach (var row in Rows)
+@foreach (var section in Sections)
 {
-    <div class="row g-3 mb-3">
-    @foreach (var field in row.Fields)
-    {
-        <div class="col-12 col-md-@(12 / (row.Fields.Count == 0 ? 1 : row.Fields.Count)) mb-3">
-            @if (field.FieldType != "title" && field.FieldType != "section")
-            {
-                <label class="form-label">@field.Label</label>
-            }
-
-        @switch (field.FieldType)
+    <div class="mb-4">
+        <hr />
+        @if (!string.IsNullOrWhiteSpace(section.Title))
         {
-            case "text":
-                <input class="form-control" placeholder="Short answer" disabled />
-                break;
-
-            case "textarea":
-                <textarea class="form-control" placeholder="Paragraph" disabled></textarea>
-                break;
-
-            case "radio":
-                @foreach (var opt in field.OptionItems)
-                {
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" disabled />
-                        <label class="form-check-label">@opt</label>
-                    </div>
-                }
-                break;
-
-            case "checkbox":
-                @foreach (var opt in field.OptionItems)
-                {
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" disabled />
-                        <label class="form-check-label">@opt</label>
-                    </div>
-                }
-                break;
-
-            case "dropdown":
-                <select class="form-select" disabled>
-                    @foreach (var opt in field.OptionItems)
+            <h5>@(section.Title)</h5>
+        }
+        @if (!string.IsNullOrWhiteSpace(section.Instructions))
+        {
+            <p class="text-muted">@(section.Instructions)</p>
+        }
+        @foreach (var row in section.Rows)
+        {
+            <div class="row g-3 mb-3">
+            @foreach (var field in row.Fields)
+            {
+                <div class="col-12 col-md-@(12 / (row.Fields.Count == 0 ? 1 : row.Fields.Count)) mb-3">
+                    @if (field.FieldType != "title" && field.FieldType != "section" && field.FieldType != "image" && field.FieldType != "statictext")
                     {
-                        <option>@opt</option>
+                        <label class="form-label">@field.Label</label>
                     }
-                </select>
-                break;
-
-            case "scale":
-                <div class="d-flex align-items-center gap-3">
-                    @for (int i = field.ScaleMin; i <= field.ScaleMax; i++)
+                    @switch (field.FieldType)
                     {
-                        <div class="form-check">
-                            <input type="radio" disabled class="form-check-input" />
-                            <label class="form-check-label">@i</label>
-                        </div>
+                        case "text":
+                            <input class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Short answer")" maxlength="@field.CharLimit" minlength="@field.MinCharLimit" />
+                            break;
+        
+                        case "textarea":
+                            <textarea class="form-control" placeholder="@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Paragraph")" maxlength="@field.CharLimit" minlength="@field.MinCharLimit"></textarea>
+                            break;
+                        case "radio":
+                            @foreach (var opt in field.OptionItems)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="@field.Key" />
+                                    <label class="form-check-label">@opt</label>
+                                </div>
+                            }
+                            break;
+                        case "checkbox":
+                            @foreach (var opt in field.OptionItems)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" />
+                                    <label class="form-check-label">@opt</label>
+                                </div>
+                            }
+                            break;
+                        case "dropdown":
+                            <select class="form-select">
+                                <option>@(!string.IsNullOrWhiteSpace(field.Placeholder) ? field.Placeholder : "Select one from dropdown")</option>
+                                @foreach (var opt in field.OptionItems)
+                                {
+                                    <option>@opt</option>
+                                }
+                            </select>
+                            break;
+                        case "user":
+                            <select class="form-select">
+                                <option>Select user</option>
+                            </select>
+                            break;
+                        case "department":
+                            <select class="form-select">
+                                <option>Select department</option>
+                            </select>
+                            break;
+                        case "location":
+                            <select class="form-select">
+                                <option>Select location</option>
+                            </select>
+                            break;
+                        case "scale":
+                            <div class="d-flex align-items-center gap-3">
+                                @for (int i = field.ScaleMin; i <= field.ScaleMax; i++)
+                                {
+                                    <div class="form-check">
+                                        <input type="radio" class="form-check-input" name="scale-@field.Key" />
+                                        <label class="form-check-label">@i</label>
+                                    </div>
+                                }
+                            </div>
+                            break;
+                        case "grid_radio":
+                        case "grid_checkbox":
+                            <table class="table table-bordered table-sm">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        @foreach (var col in field.GridColumns)
+                                        {
+                                            <th>@col</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var gridRow in field.GridRows)
+                                    {
+                                        <tr>
+                                            <td><strong>@gridRow</strong></td>
+                                            @foreach (var col in field.GridColumns)
+                                            {
+                                                <td>
+                                                    @if (field.FieldType == "grid_radio")
+                                                    {
+                                                        <input type="radio" name="@($"grid-{field.Key}-{gridRow}")" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="checkbox" />
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            break;
+                        case "multitext":
+                            var rows = GetPreviewRows(field);
+                            <table class="table table-bordered table-sm">
+                                <thead>
+                                    <tr>
+                                        @foreach (var col in field.GridColumns)
+                                        {
+                                            <th>@col</th>
+                                        }
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int r = 0; r < rows.Count; r++)
+                                    {
+                                        <tr>
+                                            @for (int c = 0; c < field.GridColumns.Count; c++)
+                                            {
+                                                <td><input class="form-control" value="@rows[r].Values[c]" @onchange="e => OnPreviewMultiTextChanged(field.Key, r, c, e)" /></td>
+                                            }
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemovePreviewRow(field.Key, r)" disabled="@(rows.Count == 1)">×</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            break;
+                        case "file":
+                            <input type="file" class="form-control" />
+                            break;
+                        case "image":
+                            @if (!string.IsNullOrWhiteSpace(field.ImageUrl))
+                            {
+                                <img src="/@field.ImageUrl" style="@GetImageStyle(field)" />
+                            }
+                            break;
+                        case "statictext":
+                            <p>@field.Label</p>
+                            break;
+                        case "title":
+                            <h4 class="text-muted">@field.Label</h4>
+                            break;
+                        default:
+                            <input class="form-control" />
+                            break;
                     }
                 </div>
-                break;
-
-            case "grid_radio":
-            case "grid_checkbox":
-                <table class="table table-bordered table-sm">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            @foreach (var col in field.GridColumns)
-                            {
-                                <th>@col</th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var gridRow in field.GridRows)
-                        {
-                            <tr>
-                                <td><strong>@gridRow</strong></td>
-                                @foreach (var col in field.GridColumns)
-                                {
-                                    <td>
-                                        @if (field.FieldType == "grid_radio")
-                                        {
-                                            <input type="radio" disabled />
-                                        }
-                                        else
-                                        {
-                                            <input type="checkbox" disabled />
-                                        }
-                                    </td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                break;
-
-            case "file":
-                <input type="file" class="form-control" disabled />
-                break;
-
-            case "title":
-                <h4 class="text-muted">@field.Label</h4>
-                break;
-
-            case "section":
-                <hr />
-                <h5>@field.Label</h5>
-                break;
-
-            default:
-                <input class="form-control" disabled />
-                break;
+            }
+            </div>
         }
-
-        </div>
-    }
     </div>
 }
 
 @code {
-    [Parameter] public List<DesignerRow> Rows { get; set; } = new();
+    [Parameter] public List<DesignerSection> Sections { get; set; } = new();
     [Parameter] public string? FormName { get; set; }
+
+    private Dictionary<string, List<MultiTextRow>> previewData = new();
+
+    List<MultiTextRow> GetPreviewRows(DesignerField field)
+    {
+        if (!previewData.TryGetValue(field.Key, out var rows))
+        {
+            rows = new List<MultiTextRow>();
+            previewData[field.Key] = rows;
+        }
+
+        NormalizePreviewRows(rows, field.GridColumns.Count);
+
+        return rows;
+    }
+
+    void OnPreviewMultiTextChanged(string key, int row, int col, ChangeEventArgs e)
+    {
+        if (previewData.TryGetValue(key, out var rows))
+        {
+            if (row < 0)
+                return;
+
+            while (rows.Count <= row)
+            {
+                rows.Add(new MultiTextRow
+                {
+                    Values = Enumerable.Repeat(string.Empty, col + 1).ToList()
+                });
+            }
+
+            while (rows[row].Values.Count <= col)
+            {
+                rows[row].Values.Add(string.Empty);
+            }
+
+            rows[row].Values[col] = e.Value?.ToString() ?? string.Empty;
+
+            NormalizePreviewRows(rows, rows[row].Values.Count);
+        }
+    }
+
+    void RemovePreviewRow(string key, int index)
+    {
+        if (previewData.TryGetValue(key, out var rows) && index >= 0 && index < rows.Count)
+        {
+            rows.RemoveAt(index);
+            NormalizePreviewRows(rows, rows.FirstOrDefault()?.Values.Count ?? 0);
+            StateHasChanged();
+        }
+    }
+
+    void NormalizePreviewRows(List<MultiTextRow> rows, int cols)
+    {
+        foreach (var r in rows)
+        {
+            while (r.Values.Count < cols)
+                r.Values.Add(string.Empty);
+            if (r.Values.Count > cols)
+                r.Values = r.Values.Take(cols).ToList();
+        }
+
+        for (int i = rows.Count - 2; i >= 0; i--)
+        {
+            if (rows[i].Values.All(v => string.IsNullOrWhiteSpace(v)))
+                rows.RemoveAt(i);
+        }
+
+        if (rows.Count == 0 || rows.Last().Values.Any(v => !string.IsNullOrWhiteSpace(v)))
+        {
+            rows.Add(new MultiTextRow
+            {
+                Values = Enumerable.Repeat(string.Empty, cols).ToList()
+            });
+        }
+    }
+
+    string GetImageStyle(DesignerField f) =>
+        $"max-width:100%;{(f.ImageWidth.HasValue ? $"width:{f.ImageWidth}px;" : string.Empty)}{(f.ImageHeight.HasValue ? $"height:{f.ImageHeight}px;" : string.Empty)}";
+
+    class MultiTextRow
+    {
+        public List<string> Values { get; set; } = new();
+    }
 }
