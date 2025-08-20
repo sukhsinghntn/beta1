@@ -736,7 +736,19 @@ else
                 }
             });
 
-        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
+        var response = await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            Console.Error.WriteLine($"Submit failed: {response.StatusCode} - {error}");
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Submission failed",
+                Detail = "Unable to save your responses."
+            });
+            return;
+        }
 
         Navigation.NavigateTo($"/forms/{FormId}/submitted", true);
     }

@@ -10,16 +10,19 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace DynamicFormsApp.Server.Services
 {
     public class DynamicFormService
     {
         private readonly AppDbContext _db;
+        private readonly ILogger<DynamicFormService> _logger;
 
-        public DynamicFormService(AppDbContext db)
+        public DynamicFormService(AppDbContext db, ILogger<DynamicFormService> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         private string SanitizeKey(string raw) =>
@@ -331,42 +334,50 @@ namespace DynamicFormsApp.Server.Services
             int idx = 0;
             foreach (var kv in filtered)
             {
-                object raw = kv.Value;
-                if (raw is JsonElement je)
+                try
                 {
-                    raw = je.ValueKind switch
+                    object raw = kv.Value;
+                    if (raw is JsonElement je)
                     {
-                        JsonValueKind.String => je.GetString(),
-                        JsonValueKind.Number when je.TryGetInt64(out var l) => l,
-                        JsonValueKind.Number when je.TryGetDouble(out var d) => d,
-                        JsonValueKind.True => true,
-                        JsonValueKind.False => false,
-                        JsonValueKind.Array => je.GetRawText(), // Store JSON string for arrays
-                        JsonValueKind.Object => je.GetRawText(),
-                        JsonValueKind.Null => null,
-                        _ => je.GetRawText(),
-                    };
-                }
+                        raw = je.ValueKind switch
+                        {
+                            JsonValueKind.String => je.GetString(),
+                            JsonValueKind.Number when je.TryGetInt64(out var l) => l,
+                            JsonValueKind.Number when je.TryGetDouble(out var d) => d,
+                            JsonValueKind.True => true,
+                            JsonValueKind.False => false,
+                            JsonValueKind.Array => je.GetRawText(),
+                            JsonValueKind.Object => je.GetRawText(),
+                            JsonValueKind.Null => null,
+                            _ => je.GetRawText(),
+                        };
+                    }
 
-                if (raw is List<string> stringList)
-                {
-                    raw = JsonSerializer.Serialize(stringList);
-                }
-                else if (raw is List<List<string>> nestedList)
-                {
-                    raw = JsonSerializer.Serialize(nestedList);
-                }
-                else if (raw is Dictionary<string, string> dict)
-                {
-                    raw = JsonSerializer.Serialize(dict);
-                }
-                else if (raw is Dictionary<string, List<string>> dictList)
-                {
-                    raw = JsonSerializer.Serialize(dictList);
-                }
+                    if (raw is List<string> stringList)
+                    {
+                        raw = JsonSerializer.Serialize(stringList);
+                    }
+                    else if (raw is List<List<string>> nestedList)
+                    {
+                        raw = JsonSerializer.Serialize(nestedList);
+                    }
+                    else if (raw is Dictionary<string, string> dict)
+                    {
+                        raw = JsonSerializer.Serialize(dict);
+                    }
+                    else if (raw is Dictionary<string, List<string>> dictList)
+                    {
+                        raw = JsonSerializer.Serialize(dictList);
+                    }
 
-                sqlParams.Add(new SqlParameter($"@p{idx}", raw ?? DBNull.Value));
-                idx++;
+                    sqlParams.Add(new SqlParameter($"@p{idx}", raw ?? DBNull.Value));
+                    idx++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing field {FieldKey} with value {FieldValue}", kv.Key, kv.Value);
+                    throw;
+                }
             }
 
             cols = string.IsNullOrEmpty(cols) ? "CreatedAt" : cols + ", CreatedAt";
@@ -381,7 +392,16 @@ namespace DynamicFormsApp.Server.Services
             }
 
             var sql = $"INSERT INTO [{tableName}] ({cols}) VALUES ({paramNames});";
-            await _db.Database.ExecuteSqlRawAsync(sql, sqlParams.ToArray());
+            try
+            {
+                await _db.Database.ExecuteSqlRawAsync(sql, sqlParams.ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to insert response for form {FormId}", formId);
+                _logger.LogError("Payload: {Payload}", JsonSerializer.Serialize(filtered));
+                throw;
+            }
 
             return form;
         }
