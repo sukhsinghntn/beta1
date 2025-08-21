@@ -101,6 +101,28 @@ else
                             }
                         </select>
                         break;
+                    case "multi_text":
+                        var mtOptions = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]") ?? new();
+        
+                        var mtRows = GetMultiTextRows(fld.Key, mtOptions.Count);
+                        for (int rowIdx = 0; rowIdx < mtRows.Count; rowIdx++)
+                        {
+                            <div class="d-flex mb-2">
+                                @for (int colIdx = 0; colIdx < mtOptions.Count; colIdx++)
+                                {
+                                    <input type="text" class="form-control me-1"
+                                           placeholder="@mtOptions[colIdx]"
+                                           value="@mtRows[rowIdx][colIdx]"
+                                           @oninput="e => OnMultiTextChanged(fld.Key, rowIdx, colIdx, e, mtOptions.Count)" />
+                                    }
+                                @if (mtRows.Count > 1 && rowIdx < mtRows.Count - 1)
+                                {
+                                    <button type="button" class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => RemoveMultiTextRow(fld.Key, rowIdx, mtOptions.Count)">x</button>
+                                }
+                            </div>
+                        }
+                        break;
 
                     case "user":
                         <select class="form-select" value="@GetString(fld.Key)" @onchange="e => OnTextChanged(fld.Key, e)">
@@ -280,16 +302,27 @@ else
                     continue;
                 }
 
-                responseData[fld.Key] = fld.FieldType switch
+                if (fld.FieldType == "multi_text")
                 {
-                    "checkbox" => new List<string>(),
-                    "number" => (object?)null,
-                    "date" => (object?)null,
-                    "time" => (object?)null,
-                    "datetime" => (object?)null,
-                    "file" => "",
-                    _ => string.Empty
-                };
+                    var opts = JsonSerializer.Deserialize<List<string>>(fld.OptionsJson ?? "[]") ?? new();
+                    responseData[fld.Key] = new List<List<string>>
+                    {
+                        Enumerable.Repeat(string.Empty, opts.Count).ToList()
+                    };
+                }
+                else
+                {
+                    responseData[fld.Key] = fld.FieldType switch
+                    {
+                        "checkbox" => new List<string>(),
+                        "number" => (object?)null,
+                        "date" => (object?)null,
+                        "time" => (object?)null,
+                        "datetime" => (object?)null,
+                        "file" => "",
+                        _ => string.Empty
+                    };
+                }
             }
 
             StateHasChanged();
@@ -301,6 +334,33 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+    List<List<string>> GetMultiTextRows(string key, int columns)
+    {
+        if (!responseData.TryGetValue(key, out var obj) || obj is not List<List<string>> rows)
+        {
+            rows = new List<List<string>>();
+            responseData[key] = rows;
+        }
+        if (rows.Count == 0)
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+        EnsureSingleBlankRow(rows, columns);
+        return rows;
+    }
+
+    void EnsureSingleBlankRow(List<List<string>> rows, int columns)
+    {
+        if (rows.Count == 0)
+        {
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+            return;
+        }
+
+        while (rows.Count > 1 && rows[^1].All(string.IsNullOrWhiteSpace) && rows[^2].All(string.IsNullOrWhiteSpace))
+            rows.RemoveAt(rows.Count - 1);
+
+        if (rows[^1].Any(v => !string.IsNullOrWhiteSpace(v)))
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+    }
 
     string? GetInstructions(FormField field)
     {
@@ -394,6 +454,28 @@ else
             responseData[key] = dt;
         else
             responseData[key] = null;
+    }
+
+    void OnMultiTextChanged(string key, int rowIdx, int colIdx, ChangeEventArgs e, int columns)
+    {
+        var rows = GetMultiTextRows(key, columns);
+        while (rows.Count <= rowIdx)
+            rows.Add(Enumerable.Repeat(string.Empty, columns).ToList());
+        var row = rows[rowIdx];
+        while (row.Count <= colIdx)
+            row.Add(string.Empty);
+        row[colIdx] = e.Value?.ToString() ?? string.Empty;
+
+        EnsureSingleBlankRow(rows, columns);
+    }
+
+    void RemoveMultiTextRow(string key, int rowIdx, int columns)
+    {
+        if (!responseData.TryGetValue(key, out var obj) || obj is not List<List<string>> rows)
+            return;
+        if (rowIdx < rows.Count)
+            rows.RemoveAt(rowIdx);
+        EnsureSingleBlankRow(rows, columns);
     }
 
     void OnCheckboxChanged(string key, string option, ChangeEventArgs e)
@@ -491,6 +573,16 @@ else
                     f.FieldType != "title"))
             .ToDictionary(k => k.Key, v => v.Value);
 
+        foreach (var key in submitData.Keys.ToList())
+        {
+            if (submitData[key] is List<List<string>> rows)
+            {
+                submitData[key] = rows
+                    .Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c)))
+                    .ToList();
+            }
+        }
+
         await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
 
         var user = await CookieHelper.LoginStatus();
@@ -508,7 +600,9 @@ else
     {
         if (value == null) return true;
         if (value is string s) return string.IsNullOrWhiteSpace(s);
-        if (value is IEnumerable<string> list) return !list.Any();
+        if (value is IEnumerable<string> list) return !list.Any(v => !string.IsNullOrWhiteSpace(v));
+        if (value is IEnumerable<IEnumerable<string>> matrix)
+            return !matrix.Any(r => r.Any(c => !string.IsNullOrWhiteSpace(c)));
         return false;
     }
 

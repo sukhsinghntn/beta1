@@ -34,6 +34,7 @@ else if (!string.IsNullOrEmpty(deletedMessage))
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <div class="draggable-field" draggable="true" data-type="text"><span class="material-icons me-1">short_text</span> Short Answer</div>
+                <div class="draggable-field" draggable="true" data-type="multi_text"><span class="material-icons me-1">view_list</span> Multi Short Answer</div>
                 <div class="draggable-field" draggable="true" data-type="textarea"><span class="material-icons me-1">notes</span> Paragraph</div>
                 <div class="draggable-field" draggable="true" data-type="radio"><span class="material-icons me-1">radio_button_checked</span> Multiple Choice</div>
                 <div class="draggable-field" draggable="true" data-type="checkbox"><span class="material-icons me-1">check_box</span> Checkbox</div>
@@ -722,7 +723,7 @@ List<object> BuildFieldPayload()
                 return;
             }
 
-            if ((f.FieldType == "radio" || f.FieldType == "checkbox" || f.FieldType == "dropdown") &&
+            if ((f.FieldType == "radio" || f.FieldType == "checkbox" || f.FieldType == "dropdown" || f.FieldType == "multi_text") &&
                 !f.OptionItems.Any(o => !string.IsNullOrWhiteSpace(o)))
             {
                 NotificationService.Notify(new NotificationMessage

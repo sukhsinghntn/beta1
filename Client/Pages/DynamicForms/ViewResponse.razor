@@ -230,6 +230,24 @@ else
                 }
             }
         }
+        else if (field.FieldType == "multi_text")
+        {
+            if (!string.IsNullOrWhiteSpace(val))
+            {
+                try
+                {
+                    var rows = JsonSerializer.Deserialize<List<List<string>>>(val) ?? new();
+                    var formatted = rows
+                        .Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c)))
+                        .Select(r => string.Join(", ", r.Where(c => !string.IsNullOrWhiteSpace(c))));
+                    builder.AddContent(7, string.Join("; ", formatted));
+                }
+                catch
+                {
+                    builder.AddContent(8, val);
+                }
+            }
+        }
         else
         {
             builder.AddContent(9, val);
@@ -258,9 +276,23 @@ else
                     var list = JsonSerializer.Deserialize<List<string>>(val) ?? new();
                     return string.Join(", ", list);
                 }
-                catch
+                catch { }
+            }
+            return val;
+        }
+        else if (field.FieldType == "multi_text")
+        {
+            if (!string.IsNullOrWhiteSpace(val))
+            {
+                try
                 {
+                    var rows = JsonSerializer.Deserialize<List<List<string>>>(val) ?? new();
+                    var formatted = rows
+                        .Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c)))
+                        .Select(r => string.Join(", ", r.Where(c => !string.IsNullOrWhiteSpace(c))));
+                    return string.Join("; ", formatted);
                 }
+                catch { }
             }
             return val;
         }

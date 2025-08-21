@@ -45,7 +45,7 @@ else
                     <p>No numeric data.</p>
                 }
             }
-            else if (field.FieldType is "dropdown" or "radio" or "checkbox")
+            else if (field.FieldType is "dropdown" or "radio" or "checkbox" or "multi_text")
             {
                 var allValues = responses.SelectMany(r => ExtractOptions(r, field)).ToList();
                 var grouped = allValues.GroupBy(v => v).ToDictionary(g => g.Key, g => g.Count());
@@ -135,16 +135,37 @@ else
         if (!row.TryGetValue(field.Key, out var val) || val is null)
             return Enumerable.Empty<string>();
 
-        if (field.FieldType == "checkbox")
+        if (field.FieldType == "checkbox" || field.FieldType == "multi_text")
         {
             if (val is JsonElement je && je.ValueKind == JsonValueKind.Array)
             {
+                if (field.FieldType == "multi_text")
+                    return je.EnumerateArray().SelectMany(r => r.EnumerateArray().Select(e => e.GetString())
+                        .Where(v => !string.IsNullOrWhiteSpace(v)));
                 return je.EnumerateArray().Select(e => e.GetString()).Where(v => !string.IsNullOrWhiteSpace(v));
+            }
+            else if (val is string s)
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(s);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    {
+                        if (field.FieldType == "multi_text")
+                            return doc.RootElement.EnumerateArray()
+                                .SelectMany(r => r.EnumerateArray().Select(e => e.GetString())
+                                .Where(v => !string.IsNullOrWhiteSpace(v)));
+                        return doc.RootElement.EnumerateArray()
+                            .Select(e => e.GetString()).Where(v => !string.IsNullOrWhiteSpace(v));
+                    }
+                }
+                catch { }
             }
             else if (val is IEnumerable<string> strList)
             {
                 return strList;
             }
+            return Enumerable.Empty<string>();
         }
 
         return new[] { val.ToString() };

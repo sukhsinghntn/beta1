@@ -71,6 +71,7 @@
                 <div class="col-md-4">
                     <select class="form-select" @bind="field.FieldType">
                         <option value="text">Short Answer</option>
+                        <option value="multi_text">Multi Short Answer</option>
                         <option value="textarea">Paragraph</option>
                         <option value="radio">Multiple Choice</option>
                         <option value="checkbox">Checkbox</option>
@@ -221,7 +222,7 @@
                 return;
             }
 
-            if ((f.FieldType == "radio" || f.FieldType == "checkbox" || f.FieldType == "dropdown") &&
+            if ((f.FieldType == "radio" || f.FieldType == "checkbox" || f.FieldType == "dropdown" || f.FieldType == "multi_text") &&
                 f.Options.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length == 0)
             {
                 NotificationService.Notify(new NotificationMessage
