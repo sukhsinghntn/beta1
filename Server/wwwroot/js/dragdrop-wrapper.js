@@ -29,24 +29,51 @@ window.initFieldDragDrop = (canvasSelector, dotnetHelper) => {
         const zone = e.target.closest('.row-dropzone');
         if (zone) {
             const insertIndex = parseInt(zone.getAttribute('data-insert'));
-            dotnetHelper.invokeMethodAsync('AddRowFromDrop', type, insertIndex);
+            const sec = parseInt(zone.getAttribute('data-section'));
+            dotnetHelper.invokeMethodAsync('AddRowFromDrop', type, sec, insertIndex);
             return;
         }
 
         const rowEl = e.target.closest('.designer-row');
         let rowIndex = -1;
+        let secIndex = -1;
         let colIndex = -1;
         if (rowEl) {
-            const rows = Array.from(canvas.querySelectorAll('.designer-row'));
-            rowIndex = rows.indexOf(rowEl);
+            const sectionEl = rowEl.closest('.section-wrapper');
+            if (sectionEl) secIndex = parseInt(sectionEl.getAttribute('data-section'));
+            rowIndex = parseInt(rowEl.getAttribute('data-row'));
             const colEl = e.target.closest('[data-id]');
             if (colEl) {
                 colIndex = parseInt(colEl.getAttribute('data-id'));
             }
         }
-        dotnetHelper.invokeMethodAsync('AddFieldFromDrop', type, rowIndex, colIndex);
+        dotnetHelper.invokeMethodAsync('AddFieldFromDrop', type, secIndex, rowIndex, colIndex);
     });
-}; 
+};
 
 // Backwards compatibility
 window.initDragDrop = window.initFieldDragDrop;
+
+window.focusFieldLabel = (sectionIndex, rowIndex, fieldIndex) => {
+    requestAnimationFrame(() => {
+        const selector = `#section-${sectionIndex}-rows .designer-row[data-row='${rowIndex}'] [data-id='${fieldIndex}'] input.form-control-sm`;
+        const el = document.querySelector(selector);
+        if (el) {
+            el.focus();
+        }
+    });
+};
+
+window.focusLastInput = (container) => {
+    if (!container) return;
+    requestAnimationFrame(() => {
+        const inputs = container.querySelectorAll('input');
+        if (inputs.length > 0) {
+            inputs[inputs.length - 1].focus();
+        }
+    });
+};
+
+window.triggerClick = (el) => {
+    if (el) el.click();
+};
