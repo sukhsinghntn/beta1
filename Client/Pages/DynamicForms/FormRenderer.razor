@@ -54,12 +54,14 @@ else
                 {
                     case "text":
                         <input type="text" class="form-control"
+                               placeholder="@fld.Placeholder"
                                value="@GetString(fld.Key)"
+                               maxlength="@fld.CharLimit"
                                @onchange="e => OnTextChanged(fld.Key, e)" />
                         break;
 
                     case "textarea":
-                        <textarea class="form-control"
+                        <textarea class="form-control" placeholder="@fld.Placeholder" maxlength="@fld.CharLimit"
                                   @onchange="e => OnTextChanged(fld.Key, e)">@GetString(fld.Key)</textarea>
                         break;
 
@@ -137,7 +139,14 @@ else
 
                     case "section":
                         <hr />
-                        <h5>@fld.Label</h5>
+                        @if (!string.IsNullOrWhiteSpace(fld.Label))
+                        {
+                            <h5>@fld.Label</h5>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(GetInstructions(fld)))
+                        {
+                            <p class="text-muted">@GetInstructions(fld)</p>
+                        }
                         break;
 
                     case "scale":
@@ -213,6 +222,11 @@ else
 
             foreach (var fld in form.Fields)
             {
+                if (fld.FieldType == "section" || fld.FieldType == "title")
+                {
+                    continue;
+                }
+
                 responseData[fld.Key] = fld.FieldType switch
                 {
                     "checkbox" => new List<string>(),
@@ -234,6 +248,20 @@ else
     string GetDateString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-dd") : "";
     string GetTimeString(string key) => responseData[key] is TimeSpan ts ? ts.ToString(@"hh\:mm") : "";
     string GetDateTimeString(string key) => responseData[key] is DateTime dt ? dt.ToString("yyyy-MM-ddTHH:mm") : "";
+
+    string? GetInstructions(FormField field)
+    {
+        if (string.IsNullOrWhiteSpace(field.OptionsJson))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(field.OptionsJson);
+            if (doc.RootElement.TryGetProperty("Instructions", out var instEl))
+                return instEl.GetString();
+        }
+        catch { }
+        return null;
+    }
 
     void OnTextChanged(string key, ChangeEventArgs e) =>
         responseData[key] = e.Value?.ToString() ?? "";
@@ -314,6 +342,20 @@ else
     {
         foreach (var fld in form.Fields)
         {
+            if ((fld.FieldType == "text" || fld.FieldType == "textarea") && fld.CharLimit.HasValue)
+            {
+                if (responseData.TryGetValue(fld.Key, out var valObj) && valObj is string s && s.Length > fld.CharLimit.Value)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Character limit",
+                        Detail = $"'{fld.Label}' allows {fld.CharLimit} characters (currently {s.Length})."
+                    });
+                    return;
+                }
+            }
+
             if (!fld.IsRequired)
                 continue;
 
@@ -329,7 +371,15 @@ else
             }
         }
 
-        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", responseData);
+        var submitData = responseData
+            .Where(kv =>
+                form.Fields.Any(f =>
+                    f.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase) &&
+                    f.FieldType != "section" &&
+                    f.FieldType != "title"))
+            .ToDictionary(k => k.Key, v => v.Value);
+
+        await Http.PostAsJsonAsync($"api/forms/{FormId}/responses", submitData);
 
         var user = await CookieHelper.LoginStatus();
         if (string.IsNullOrEmpty(user))
