@@ -17,7 +17,7 @@
 <h2 class="mb-2">Form Builder</h2>
 <p class="text-muted">Drag fields to reorder or move them between rows. Each row can have up to four columns.</p>
 
-<div class="form-check form-switch mb-4">
+<div class="form-check form-switch position-fixed top-0 end-0 m-3" style="z-index:1050;">
     <input class="form-check-input" type="checkbox" id="previewToggle" @bind="isPreviewMode" />
     <label class="form-check-label" for="previewToggle">Preview Mode</label>
 </div>
@@ -70,28 +70,59 @@
             </div>
         </div>
         <div class="col-md-9">
-            <div id="fields-container">
-                @for (int r = 0; r < rows.Count; r++)
+            <div id="sections-container">
+                @for (int s = 0; s < sections.Count; s++)
                 {
-                    var rowIndex = r;
-                    <div class="row-dropzone" data-insert="@rowIndex"></div>
-                    <div class="row g-3 mb-3 designer-row" data-row="@rowIndex" @key="rows[rowIndex]">
-                        @for (int i = 0; i < rows[rowIndex].Fields.Count; i++)
-                        {
-                            <div class="col-12 col-md-@(12 / (rows[rowIndex].Fields.Count == 0 ? 1 : rows[rowIndex].Fields.Count))" data-id="@i" @key="rows[rowIndex].Fields[i]">
-                                <FieldEditor Field="rows[rowIndex].Fields[i]"
-                                             OnRemove="async f => await RemoveField(rowIndex, f)"
-                                             OnDuplicate="async f => await DuplicateField(rowIndex, f)" />
+                    var secIndex = s;
+                    <div class="section-wrapper mb-4" data-section="@secIndex" id="section-@secIndex" @key="sections[secIndex]">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="material-icons section-drag-handle">drag_indicator</span>
+                                    <input class="form-control form-control-sm" placeholder="Section title" @bind="sections[secIndex].Title" />
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleCollapse(secIndex)">
+                                        <span class="material-icons">@(!sections[secIndex].IsCollapsed ? "expand_less" : "expand_more")</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSection(secIndex)">
+                                        <span class="material-icons">delete</span>
+                                    </button>
+                                </div>
                             </div>
-                        }
-                        <div class="col-12 no-drop">
-                            <button class="btn btn-sm btn-primary" @onclick="() => AddField(rowIndex)">+ Add Column</button>
+                            <div class="card-body" hidden="@sections[secIndex].IsCollapsed">
+                                <textarea class="form-control mb-3" placeholder="Section instructions" @bind="sections[secIndex].Instructions"></textarea>
+                                <div id="section-@secIndex-rows">
+                                    @for (int r = 0; r < sections[secIndex].Rows.Count; r++)
+                                    {
+                                        var rowIndex = r;
+                                        <div class="row-dropzone" data-section="@secIndex" data-insert="@rowIndex"></div>
+                                        <div class="row g-3 mb-3 designer-row" data-section="@secIndex" data-row="@rowIndex" @key="sections[secIndex].Rows[rowIndex]">
+                                            @for (int i = 0; i < sections[secIndex].Rows[rowIndex].Fields.Count; i++)
+                                            {
+                                                <div class="col-12 col-md-@(12 / (sections[secIndex].Rows[rowIndex].Fields.Count == 0 ? 1 : sections[secIndex].Rows[rowIndex].Fields.Count))" data-id="@i" @key="sections[secIndex].Rows[rowIndex].Fields[i]">
+                                                    <FieldEditor Field="sections[secIndex].Rows[rowIndex].Fields[i]"
+                                                                 OnRemove="async f => await RemoveField(secIndex, rowIndex, f)"
+                                                                 OnDuplicate="async f => await DuplicateField(secIndex, rowIndex, f)" />
+                                                </div>
+                                            }
+                                            <div class="col-12 no-drop">
+                                                <button class="btn btn-sm btn-primary" @onclick="() => AddField(secIndex, rowIndex)">+ Add Column</button>
+                                            </div>
+                                        </div>
+                                    }
+                                    <div class="row-dropzone" data-section="@secIndex" data-insert="@sections[secIndex].Rows.Count"></div>
+                                    <div class="d-grid mb-3">
+                                        <button class="btn btn-primary" @onclick="() => AddRow(secIndex)">+ Add Row</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 }
-                <div class="row-dropzone" data-insert="@rows.Count"></div>
+                <div class="section-dropzone" data-insert="@sections.Count"></div>
                 <div class="d-grid mb-3">
-                    <button class="btn btn-primary" @onclick="AddRow">+ Add Row</button>
+                    <button class="btn btn-secondary" @onclick="AddSection">+ Add Section</button>
                 </div>
                 <div class="d-grid mb-2">
                     <button class="btn btn-primary btn-lg" @onclick="HandleSubmit">Create Form</button>
@@ -106,14 +137,14 @@
 else
 {
     <div class="card p-3 shadow-sm">
-        <LivePreview Rows="rows" FormName="@formName" />
+        <LivePreview Sections="sections" FormName="@formName" />
     </div>
 }
 
 @code {
     private string formName = string.Empty;
     private string formDescription = string.Empty;
-    private List<DesignerRow> rows = new() { new DesignerRow() };
+    private List<DesignerSection> sections = new() { new DesignerSection() };
     private bool isPreviewMode = false;
     private bool requireLogin = true;
     private bool notifyOnResponse = false;
@@ -142,19 +173,26 @@ else
         if (!isPreviewMode)
         {
             objRef ??= DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef);
-            await JS.InvokeVoidAsync("initFieldDragDrop", "#fields-container", objRef);
+            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef);
+            for (int i = 0; i < sections.Count; i++)
+            {
+                await JS.InvokeVoidAsync("initSortable", $"#section-{i}-rows", objRef);
+            }
+            await JS.InvokeVoidAsync("initFieldDragDrop", "#sections-container", objRef);
         }
     }
 
     [JSInvokable]
-    public void OnSortUpdate(int fromRow, int oldIndex, int toRow, int newIndex)
+    public void OnSortUpdate(int fromSection, int fromRow, int oldIndex, int toSection, int toRow, int newIndex)
     {
-        if (fromRow < 0 || fromRow >= rows.Count || toRow < 0 || toRow >= rows.Count)
+        if (fromSection < 0 || fromSection >= sections.Count || toSection < 0 || toSection >= sections.Count)
             return;
 
-        var source = rows[fromRow].Fields;
-        var dest = rows[toRow].Fields;
+        if (fromRow < 0 || fromRow >= sections[fromSection].Rows.Count || toRow < 0 || toRow >= sections[toSection].Rows.Count)
+            return;
+
+        var source = sections[fromSection].Rows[fromRow].Fields;
+        var dest = sections[toSection].Rows[toRow].Fields;
 
         if (oldIndex < 0 || oldIndex >= source.Count || newIndex < 0 || newIndex > dest.Count)
             return;
@@ -177,23 +215,41 @@ else
         // clamp insert index to avoid out of range errors when moving within the same row
         int insertIndex = Math.Min(newIndex, dest.Count);
         dest.Insert(insertIndex, moved);
-        if (source.Count == 0 && rows.Count > 1)
+        if (source.Count == 0 && sections[fromSection].Rows.Count > 1)
         {
-            rows.RemoveAt(fromRow);
+            sections[fromSection].Rows.RemoveAt(fromRow);
         }
         StateHasChanged();
-        JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        JS.InvokeVoidAsync("initSortable", $"#section-{fromSection}-rows", objRef!);
+        if (fromSection != toSection)
+        {
+            JS.InvokeVoidAsync("initSortable", $"#section-{toSection}-rows", objRef!);
+        }
     }
 
-    async Task AddRow()
+    async Task AddRow(int section)
     {
-        rows.Add(new DesignerRow());
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        sections[section].Rows.Add(new DesignerRow());
+        await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
-    async Task AddField(int row)
+    async Task AddSection()
     {
-        if (rows[row].Fields.Count >= 4)
+        sections.Add(new DesignerSection());
+        await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+        await JS.InvokeVoidAsync("initSortable", $"#section-{sections.Count - 1}-rows", objRef!);
+    }
+
+    DesignerField CreateField(string fieldType) => new DesignerField
+    {
+        FieldType = fieldType,
+        Placeholder = fieldType == "text" ? "Short answer" :
+                      fieldType == "textarea" ? "Paragraph" : string.Empty
+    };
+
+    async Task AddField(int section, int row, string fieldType = "text")
+    {
+        if (sections[section].Rows[row].Fields.Count >= 4)
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -203,21 +259,21 @@ else
             });
             return;
         }
-        rows[row].Fields.Add(new DesignerField());
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        sections[section].Rows[row].Fields.Add(CreateField(fieldType));
+        await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
-    async Task RemoveField(int row, DesignerField field)
+    async Task RemoveField(int section, int row, DesignerField field)
     {
-        rows[row].Fields.Remove(field);
-        if (rows[row].Fields.Count == 0 && rows.Count > 1)
+        sections[section].Rows[row].Fields.Remove(field);
+        if (sections[section].Rows[row].Fields.Count == 0 && sections[section].Rows.Count > 1)
         {
-            rows.RemoveAt(row);
+            sections[section].Rows.RemoveAt(row);
         }
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
-    async Task DuplicateField(int row, DesignerField field)
+    async Task DuplicateField(int section, int row, DesignerField field)
     {
         var copy = new DesignerField
         {
@@ -229,9 +285,10 @@ else
             GridColumns = new List<string>(field.GridColumns),
             GridRows = new List<string>(field.GridRows),
             ScaleMin = field.ScaleMin,
-            ScaleMax = field.ScaleMax
+            ScaleMax = field.ScaleMax,
+            Placeholder = field.Placeholder
         };
-        var list = rows[row].Fields;
+        var list = sections[section].Rows[row].Fields;
         if (list.Count >= 4)
         {
             NotificationService.Notify(new NotificationMessage
@@ -244,17 +301,19 @@ else
         }
 
         list.Insert(list.IndexOf(field) + 1, copy);
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        await JS.InvokeVoidAsync("initSortable", $"#section-{section}-rows", objRef!);
     }
 
     [JSInvokable]
-    public async Task AddFieldFromDrop(string fieldType, int rowIndex, int colIndex)
+    public async Task AddFieldFromDrop(string fieldType, int sectionIndex, int rowIndex, int colIndex)
     {
-        if (rowIndex < 0 || rowIndex >= rows.Count)
-            rowIndex = rows.Count - 1;
+        if (sectionIndex < 0 || sectionIndex >= sections.Count)
+            sectionIndex = sections.Count - 1;
+        if (rowIndex < 0 || rowIndex >= sections[sectionIndex].Rows.Count)
+            rowIndex = sections[sectionIndex].Rows.Count - 1;
 
-        var list = rows[rowIndex].Fields;
-        var field = new DesignerField { FieldType = fieldType };
+        var list = sections[sectionIndex].Rows[rowIndex].Fields;
+        var field = CreateField(fieldType);
 
         if (list.Count >= 4)
         {
@@ -274,20 +333,97 @@ else
             list.Insert(colIndex, field);
 
         StateHasChanged();
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
     }
 
     [JSInvokable]
-    public async Task AddRowFromDrop(string fieldType, int insertIndex)
+    public async Task AddRowFromDrop(string fieldType, int sectionIndex, int insertIndex)
     {
-        if (insertIndex < 0 || insertIndex > rows.Count)
-            insertIndex = rows.Count;
+        if (sectionIndex < 0 || sectionIndex >= sections.Count)
+            sectionIndex = sections.Count - 1;
+        if (insertIndex < 0 || insertIndex > sections[sectionIndex].Rows.Count)
+            insertIndex = sections[sectionIndex].Rows.Count;
 
         var row = new DesignerRow();
-        row.Fields.Add(new DesignerField { FieldType = fieldType });
-        rows.Insert(insertIndex, row);
+        row.Fields.Add(CreateField(fieldType));
+        sections[sectionIndex].Rows.Insert(insertIndex, row);
         StateHasChanged();
-        await JS.InvokeVoidAsync("initSortable", "#fields-container", objRef!);
+        await JS.InvokeVoidAsync("initSortable", $"#section-{sectionIndex}-rows", objRef!);
+    }
+
+    [JSInvokable]
+    public void OnSectionReorder(int oldIndex, int newIndex)
+    {
+        if (oldIndex == newIndex || oldIndex < 0 || newIndex < 0 || oldIndex >= sections.Count || newIndex >= sections.Count)
+            return;
+        var item = sections[oldIndex];
+        sections.RemoveAt(oldIndex);
+        sections.Insert(newIndex, item);
+        StateHasChanged();
+    }
+
+    void ToggleCollapse(int index)
+    {
+        sections[index].IsCollapsed = !sections[index].IsCollapsed;
+    }
+
+    async Task DeleteSection(int index)
+    {
+        bool? confirm = await DialogService.Confirm(
+            "Delete this section and all its fields?",
+            "Delete Section",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "No" });
+        if (confirm == true)
+        {
+            sections.RemoveAt(index);
+            await JS.InvokeVoidAsync("initSectionSortable", "#sections-container", objRef!);
+        }
+    }
+
+    List<object> BuildFieldPayload()
+    {
+        var list = new List<object>();
+        int rowCounter = 0;
+        foreach (var sec in sections)
+        {
+            list.Add(new
+            {
+                Label = sec.Title,
+                FieldType = "section",
+                IsRequired = false,
+                Row = rowCounter,
+                Column = 0,
+                OptionsJson = string.IsNullOrWhiteSpace(sec.Instructions) ? null :
+                    JsonSerializer.Serialize(new { Instructions = sec.Instructions })
+            });
+            rowCounter++;
+
+            foreach (var row in sec.Rows)
+            {
+                for (int c = 0; c < row.Fields.Count; c++)
+                {
+                    var f = row.Fields[c];
+                    list.Add(new
+                    {
+                        f.Label,
+                        f.FieldType,
+                        f.Placeholder,
+                        f.IsRequired,
+                        Row = rowCounter,
+                        Column = c,
+                        OptionsJson = JsonSerializer.Serialize(
+                            f.OptionItems.Count > 0 ? f.OptionItems :
+                            f.GridRows.Count > 0 || f.GridColumns.Count > 0 ? new { Rows = f.GridRows, Columns = f.GridColumns } :
+                            f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } :
+                            !string.IsNullOrWhiteSpace(f.Instructions) ? new { Instructions = f.Instructions } :
+                            new object()
+                        )
+                    });
+                }
+                rowCounter++;
+            }
+        }
+        return list;
     }
 
     async Task HandleSubmit()
@@ -303,7 +439,7 @@ else
             return;
         }
 
-        foreach (var f in rows.SelectMany(r => r.Fields))
+        foreach (var f in sections.SelectMany(s => s.Rows).SelectMany(r => r.Fields))
         {
             if (string.IsNullOrWhiteSpace(f.Label))
             {
@@ -336,19 +472,7 @@ else
             NotifyOnResponse = notifyOnResponse,
             NotificationEmail = string.IsNullOrWhiteSpace(notificationEmail) ? null : notificationEmail,
             IsActive = true,
-            Fields = rows.SelectMany((row, rIdx) => row.Fields.Select((f, cIdx) => new
-            {
-                f.Label,
-                f.FieldType,
-                f.IsRequired,
-                Row = rIdx,
-                Column = cIdx,
-                OptionsJson = JsonSerializer.Serialize(
-                    f.OptionItems.Count > 0 ? f.OptionItems :
-                    f.GridRows.Count > 0 || f.GridColumns.Count > 0 ? new { Rows = f.GridRows, Columns = f.GridColumns } :
-                    f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } : new object()
-                )
-            })).ToList()
+            Fields = BuildFieldPayload()
         };
 
         var resp = await Http.PostAsJsonAsync("api/forms", payload);
@@ -371,19 +495,7 @@ else
             NotifyOnResponse = notifyOnResponse,
             NotificationEmail = string.IsNullOrWhiteSpace(notificationEmail) ? null : notificationEmail,
             IsDraft = true,
-            Fields = rows.SelectMany((row, rIdx) => row.Fields.Select((f, cIdx) => new
-            {
-                f.Label,
-                f.FieldType,
-                f.IsRequired,
-                Row = rIdx,
-                Column = cIdx,
-                OptionsJson = JsonSerializer.Serialize(
-                    f.OptionItems.Count > 0 ? f.OptionItems :
-                    f.GridRows.Count > 0 || f.GridColumns.Count > 0 ? new { Rows = f.GridRows, Columns = f.GridColumns } :
-                    f.FieldType == "scale" ? new { Min = f.ScaleMin, Max = f.ScaleMax } : new object()
-                )
-            })).ToList()
+            Fields = BuildFieldPayload()
         };
 
         await Http.PostAsJsonAsync("api/forms", payload);
@@ -404,7 +516,7 @@ else
             return;
         }
 
-        if (rows.SelectMany(r => r.Fields).Count() >= 2)
+        if (sections.SelectMany(s => s.Rows).SelectMany(r => r.Fields).Count() >= 2)
         {
             context.PreventNavigation();
             bool? save = await DialogService.Confirm(
